@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import SocketServer
+import os
 import sys
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from bpynotify_orm import NotificationEntry
+from bpynotify_orm import NotificationEntry, notification_entry_table
 
 
 class CustomSocketServer(SocketServer.TCPServer):
 
     def __init__(self, server_address, RequestHandlerClass, session):
-        print "Done"
         SocketServer.TCPServer.__init__(self,
                                         server_address,
                                         RequestHandlerClass)
@@ -30,14 +30,10 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
     """
 
     def handle(self):
-        # self.request is the TCP socket connected to the client
-        ##self.data = self.request.recv(1024).strip()
-        ##print "{} wrote:".format(self.client_address[0])
-        ##print self.data
 
-        self.data = self.rfile.readline().strip()
-
-        entry = NotificationEntry(unicode(self.data))
+        self.data = self.rfile.readline().decode('utf8').strip()
+        #print(self.data)
+        entry = NotificationEntry(self.data)
         self.server.session.add(entry)
         self.server.session.commit()
 
@@ -46,14 +42,26 @@ def main():
     
     HOST, PORT = "localhost", 9999
 
+    if len(sys.argv) == 2 and sys.argv[1] == '-d':
+        try:
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)
+        except Exception as e:
+            sys.stderr.write("Unable to daemonize. Fork error: {0}".format(e))
+            sys.exit(1)
+
     try:
+
         engine = create_engine('sqlite:///notifications.db')
         Session = sessionmaker(bind=engine) # bound session
         session = Session()
 
         server = CustomSocketServer((HOST, PORT), MyTCPHandler, session)
-        # Activate the server; this will keep running until you
-        # interrupt the program with Ctrl-C
+
+        # clean all previous entries #
+        notification_entry_table.delete(bind=engine).execute()
+
         server.serve_forever()
 
     except Exception as e:
