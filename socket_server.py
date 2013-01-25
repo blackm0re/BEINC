@@ -14,6 +14,8 @@ from bpynotify_orm import NotificationEntry, notification_entry_table
 class CustomSocketServer(SocketServer.TCPServer):
 
     def __init__(self, server_address, RequestHandlerClass, session):
+        #super(CustomSocketServer, self).__init__(server_address, 
+        #                                         RequestHandlerClass)
         SocketServer.TCPServer.__init__(self,
                                         server_address,
                                         RequestHandlerClass)
@@ -40,7 +42,7 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
 
 def main():
     
-    HOST, PORT = "localhost", 9999
+    HOST, PORT = "localhost", 9997
 
     if len(sys.argv) == 2 and sys.argv[1] == '-d':
         try:

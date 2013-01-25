@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import socket
+import urllib
+import urllib2
+
 import weechat
 
 #### CONFIG ####
@@ -14,21 +16,28 @@ notify_channels = [
     "Exile.#pichove"
     ]
 
-connections = [ {'sbosdd_ip': '127.0.0.1',
-                 'sbosdd_port':  9999},
-#                {'sbosdd_ip': "10.0.0.2",
-#                 'sbosdd_port':  9999}
+connections = [ {'bosd_url': 'https://127.0.0.1:9999/npush/',
+                 'bosd_password': '1234'},
+
+#                {'bosd_url': 'https://pichove.org:9999/npush/',
+#                 'bosd_port':  9999,
+#                 'bosd_password': 'foo'},
                 ]
 ################
 
-def bosd_send_xosd_message(message):
+__VERSION__ = '2.0'
+
+def bosd_send_message(header='', message=''):
     for conn in connections:
         try:
+            conn['nheader'] = header  # notification header
+            conn['nmessage'] = message  # notification message
+
+            data = urllib.urlencode(conn)
+
+            req = urllib2.Request(url, data)
+            urllib2.urlopen(req)
             #weechat.prnt("", message)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((conn['sbosdd_ip'], conn['sbosdd_port']))
-            s.send(message)
-            s.close()
         except:
             continue
 
@@ -44,7 +53,7 @@ def bosd_command(data, buffer, args):
         enabled = False
         weechat.prnt(weechat.current_buffer(), "bosd off")
     else:
-        bosd_send_xosd_message(args)
+        bosd_send_message('BOSD generic', args)
 
     return weechat.WEECHAT_RC_OK
 
