@@ -11,6 +11,7 @@
 				"name": "test",
 				"password": "changeme",
 				"osd_system": "none",
+				"osd_timeout": 5000,
 				"queue_size": 4
 			}
 		]
