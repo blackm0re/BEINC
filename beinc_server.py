@@ -19,12 +19,11 @@ BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 
 
-
 class BEINCInstance(object):
     """
     Represents a single server-instance
     """
-    
+
     def __init__(self, instance_dict):
         """
         instance_dict: the config-dictionary node that represents this instance
@@ -38,7 +37,7 @@ class BEINCInstance(object):
             self.__name = instance_dict['name']
             self.__password = instance_dict['password']
             self.__queue_size = int(instance_dict['queue_size'])
-                
+
         except Exception as e:
             sys.stderr.write(
                 'Instance processing error {0}:\n{1}\n'.format(self.__name,
@@ -50,7 +49,8 @@ class BEINCInstance(object):
                 sys.stderr.write(
                     'This server does not possess pynotify capability\n')
                 sys.stderr.write(
-                    "Remove the instance {0} or define it with 'osd_system': 'none'")
+                    'Remove the instance {0}'.format(self.__name))
+                sys.stderr.write("or define it with 'osd_system': 'none'\n")
                 sys.exit(1)
 
             try:
@@ -58,7 +58,7 @@ class BEINCInstance(object):
                 self.__osd_notification.set_timeout(
                     instance_dict['osd_timeout'])
                 self.__osd_notification.set_property(
-                    'app_name', 
+                    'app_name',
                     '{0} {1}'.format(sys.argv[0], __version__))
             except Exception as e:
                 sys.stderr.write(
@@ -67,14 +67,12 @@ class BEINCInstance(object):
 
             self.__osd_type = BEINC_OSD_TYPE_PYNOTIFY
 
-
     @property
     def name(self):
         """
         name-property for the server instance
         """
         return self.__name
-
 
     @property
     def queueable(self):
@@ -83,18 +81,13 @@ class BEINCInstance(object):
         """
         return bool(self.__queue_size)
 
-
     def password_match(self, password):
         """
         Returns True if 'passowrd' matches the instance-password,
         otherwise - False
         """
-        if self.__password == password:
-            return True
+        return True if self.__password == password else False
 
-        return False
-
-    
     def send_message(self, title, message):
         """
         Displays or enqueues the message,
@@ -105,7 +98,6 @@ class BEINCInstance(object):
         else:
             self.__send_message_to_queue(title, message)
 
-
     def get_queue(self):
         """
         Reruens a json representation of the message queue
@@ -114,7 +106,6 @@ class BEINCInstance(object):
         self.__message_queue = list()
         return jstr
 
-
     def __send_pynotify_messaage(self, title, message):
         """
         Displays pynotify message
@@ -122,7 +113,6 @@ class BEINCInstance(object):
 
         self.__osd_notification.set_properties(summary=title, body=message)
         self.__osd_notification.show()
-
 
     def __send_message_to_queue(self, title, message):
         """
@@ -133,7 +123,6 @@ class BEINCInstance(object):
             self.__message_queue.pop(0)
 
         self.__message_queue.append({'title': title, 'message': message})
-
 
 
 def beinc_instance_login(method):
@@ -160,18 +149,14 @@ def beinc_instance_login(method):
             sys.stderr.write('Wrong instance or password: {0}\n'.format(e))
             raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
- 
-        print('First')
 
         if not instance.password_match(kwargs.get('password')):
-            raise cherrypy.HTTPError('403 Forbidden', 
+            raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
 
-        print('second')
         return method(self, *args, **kwargs)
 
     return tmp_func
-
 
 
 class WebNotifyServer(object):
@@ -191,7 +176,6 @@ class WebNotifyServer(object):
             sys.stderr.write('Unable to initialize queues: {0}\n'.format(e))
             sys.exit(1)
 
-
     @cherrypy.expose
     def index(self):
         """
@@ -199,14 +183,12 @@ class WebNotifyServer(object):
         """
         return 'index'
 
-
     @cherrypy.expose
     def default(self, *args):
         """
         default dispatcher
         """
         return 'default'
-
 
     @cherrypy.expose
     def push(self, *args, **kwargs):
@@ -227,10 +209,10 @@ class WebNotifyServer(object):
             sys.stderr.write('Wrong instance or password: {0}\n'.format(e))
             raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
- 
+
         if not instance.password_match(kwargs.get('password')):
             sys.stderr.write('Wrong instance or password: {0}\n'.format(e))
-            raise cherrypy.HTTPError('403 Forbidden', 
+            raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
 
 #        instance = self.__instances[args[0]]
@@ -242,10 +224,9 @@ class WebNotifyServer(object):
         except Exception as e:
             sys.stderr.write(
                 'Unable to handle message in {0}: ({1})\n'.format(
-                    instance.name, 
+                    instance.name,
                     e))
             raise cherrypy.HTTPError(500, 'Unable to send message')
-
 
     @cherrypy.expose
     @beinc_instance_login
@@ -255,12 +236,11 @@ class WebNotifyServer(object):
         return 'OK'
 
 
-
 def main():
 
-    parser = argparse.ArgumentParser(description='The following options are available')
+    parser = argparse.ArgumentParser(
+        description='The following options are available')
 
-    
     parser.add_argument('-d',
                         action='store_true',
                         dest='daemonize',
@@ -295,14 +275,13 @@ def main():
 
     args = parser.parse_args()
 
-
     try:
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
 
     except Exception as e:
-        sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file, e))
-
+        sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
+                                                           e))
 
     cherrypy.config.update({
         'server.socket_host': args.hostname,
@@ -317,7 +296,7 @@ def main():
     global pynotify
     try:
         import pynotify
-        if not pynotify.init("BEINC Notify"):
+        if not pynotify.init('BEINC Notify'):
             sys.stderr.write('pynotify.init failed! Exiting...\n')
             sys.exit(1)
     except Exception as e:
@@ -337,4 +316,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

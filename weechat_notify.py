@@ -13,6 +13,7 @@ POLLING_FREQUENCY = 10
 NOTIFICATION_URL = 'https://simeon.simeonov.no:40004/notifications/'
 TIMEOUT_SEC = 3
 
+
 def poll_notifications(scheduler):
     """
     """
@@ -20,7 +21,7 @@ def poll_notifications(scheduler):
         req = urllib2.Request(NOTIFICATION_URL)
         response = urllib2.urlopen(req)
         response_str = response.read()
-    
+
         entries = json.loads(response_str)
         for entry in entries:
             n = pynotify.Notification('IRC', entry, 'dialog-information')

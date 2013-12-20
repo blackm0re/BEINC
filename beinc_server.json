@@ -17,7 +17,25 @@
 		]
 	},
 
-	"client": {},
+	"irc_client": {
+		"targets": [
+			{
+				"name": "weechat_main",
+				"target_url": "",
+				"target_password": "changeme",
+				"title_template": "",
+				"message_template": "",
+				"channel_list": ["RedpillLinpro.#python",
+								 "Exile.#hin",
+								 "RedpillLinpro.#adult",
+								 "Exile.#pichove"],
+				"nick_list": "",
+				"channel_messages_policy": 0,
+				"private_messages_policy": 0,
+				"notifications_policy": 0
+			}
+		]
+	},
 
 	"config_version": 1
 
