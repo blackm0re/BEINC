@@ -206,12 +206,13 @@ class WebNotifyServer(object):
         try:
             instance = self.__instances[args[0]]
         except Exception as e:
-            sys.stderr.write('Wrong instance or password: {0}\n'.format(e))
+            sys.stderr.write('Wrong instance or password\n')
+            #print('DEBUG: {0}'.format(e))
             raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
 
         if not instance.password_match(kwargs.get('password')):
-            sys.stderr.write('Wrong instance or password: {0}\n'.format(e))
+            sys.stderr.write('Wrong instance or password\n')
             raise cherrypy.HTTPError('403 Forbidden',
                                      'Wrong instance or password')
 
@@ -282,6 +283,7 @@ def main():
     except Exception as e:
         sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
                                                            e))
+        sys.exit(1)
 
     cherrypy.config.update({
         'server.socket_host': args.hostname,

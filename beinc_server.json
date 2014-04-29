@@ -1,42 +1,48 @@
 {
-	"server": {
-		"general": {
-			"ssl_module": "pyopenssl",
-			"ssl_private_key": "key.pem",
-			"ssl_certificate": "cert.crt"
-		},
+    "server": {
+        "general": {
+            "ssl_module": "pyopenssl",
+            "ssl_private_key": "key.pem",
+            "ssl_certificate": "cert.crt"
+        },
 
-		"instances": [
-			{
-				"name": "test",
-				"password": "changeme",
-				"osd_system": "pynotify",
-				"osd_timeout": 5000,
-				"queue_size": 4
-			}
-		]
-	},
+        "instances": [
+            {
+                "name": "test",
+                "password": "changeme",
+                "osd_system": "pynotify",
+                "osd_timeout": 5000,
+                "queue_size": 4
+            }
+        ]
+    },
 
-	"irc_client": {
-		"targets": [
-			{
-				"name": "weechat_main",
-				"target_url": "",
-				"target_password": "changeme",
-				"title_template": "",
-				"message_template": "",
-				"channel_list": ["RedpillLinpro.#python",
-								 "Exile.#hin",
-								 "RedpillLinpro.#adult",
-								 "Exile.#pichove"],
-				"nick_list": "",
-				"channel_messages_policy": 0,
-				"private_messages_policy": 0,
-				"notifications_policy": 0
-			}
-		]
-	},
+    "irc_client": {
+        "targets": [
+            {
+                "name": "weechat_main",
+                "target_url": "",
+                "target_password": "changeme",
+                "target_cert_file": "",
+                "target_timestamp_format": "%H:%M:%S",
+                "pm_title_template": "",
+                "pm_message_template": "",
+                "cm_title_template": "",
+                "cm_message_template": "",
+                "nm_title_template": "",
+                "nm_message_template": "",
+                "channel_list": ["RedpillLinpro.#python",
+                                 "Exile.#hin",
+                                 "RedpillLinpro.#adult",
+                                 "Exile.#pichove"],
+                "nick_list": ["Exile.Blackmore"],
+                "channel_messages_policy": 0,
+                "private_messages_policy": 0,
+                "notifications_policy": 0
+            }
+        ]
+    },
 
-	"config_version": 1
-
+    "config_version": 1
+    
 }
