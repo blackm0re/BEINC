@@ -18,27 +18,30 @@
     },
 
     "irc_client": {
+        "use_current_buffer": 0,
         "targets": [
             {
                 "name": "weechat_main",
-                "target_url": "",
+                "target_url": "https://10.0.0.2:9898/push/secondtest",
                 "target_password": "changeme",
                 "target_cert_file": "",
                 "target_timestamp_format": "%H:%M:%S",
-                "pm_title_template": "",
-                "pm_message_template": "",
-                "cm_title_template": "",
-                "cm_message_template": "",
-                "nm_title_template": "",
-                "nm_message_template": "",
+                "pm_title_template": "%s @ %S",
+                "pm_message_template": "%m",
+                "cm_title_template": "%c @ %S",
+                "cm_message_template": "%s -> %m",
+                "nm_title_template": "%c @ %S",
+                "nm_message_template": "%s -> %m",
                 "channel_list": ["RedpillLinpro.#python",
-                                 "Exile.#hin",
+                                 "Exile.#test",
                                  "RedpillLinpro.#adult",
                                  "Exile.#pichove"],
                 "nick_list": ["Exile.Blackmore"],
-                "channel_messages_policy": 0,
-                "private_messages_policy": 0,
-                "notifications_policy": 0
+                "channel_messages_policy": 2,
+                "private_messages_policy": 1,
+                "notifications_policy": 1,
+                "debug": 1,
+                "enabled": 1
             }
         ]
     },
