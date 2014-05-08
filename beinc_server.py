@@ -235,35 +235,39 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='The following options are available')
-    parser.add_argument('-d',
-                        action='store_true',
-                        dest='daemonize',
-                        default=False,
-                        help='daemonize the server process')
-    parser.add_argument('-H', '--hostname',
-                        metavar='HOSTNAME',
-                        type=str,
-                        dest='hostname',
-                        default='127.0.0.1',
-                        help="Server IP / hostname")
-    parser.add_argument('-p', '--port',
-                        metavar='PORT',
-                        type=int,
-                        dest='port',
-                        default=9998,
-                        help="Server port")
-    parser.add_argument('-c', '--config-file',
-                        metavar='FILE',
-                        type=str,
-                        default=os.path.expanduser('~/.beinc_server.json'),
-                        dest='config_file',
-                        help="config file")
-    parser.add_argument('-v', '--version',
-                        action='version',
-                        version='%(prog)s {0}'.format(__version__),
-                        help='display program-version and exit')
+    parser.add_argument(
+        '-d',
+        action='store_true',
+        dest='daemonize',
+        default=False,
+        help='Run the BEINC-server in the background')
+    parser.add_argument(
+        '-H', '--hostname',
+        metavar='HOSTNAME',
+        type=str,
+        dest='hostname',
+        default='127.0.0.1',
+        help='BEINC server IP / hostname (default: 127.0.0.1)')
+    parser.add_argument(
+        '-p', '--port',
+        metavar='PORT',
+        type=int,
+        dest='port',
+        default=9998,
+        help='BEINC server port (default: 9998)')
+    parser.add_argument(
+        '-f', '--config-file',
+        metavar='FILE',
+        type=str,
+        default=os.path.expanduser('~/.beinc_server.json'),
+        dest='config_file',
+        help='BEINC config file (default: ~/.beinc_server.json)')
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s {0}'.format(__version__),
+        help='Display program-version and exit')
     args = parser.parse_args()
-
     try:
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
@@ -271,7 +275,6 @@ def main():
         sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
                                                            e))
         sys.exit(errno.EIO)
-
     ssl_certificate = config_dict['server']['general']['ssl_certificate']
     ssl_private_key = config_dict['server']['general']['ssl_private_key']
     cherrypy.config.update({
@@ -285,13 +288,11 @@ def main():
         'tools.log_tracebacks.on': False,
         'request.show_tracebacks': False
     })
-
     try:
         cherrypy.quickstart(WebNotifyServer(config_dict))
     except Exception as e:
         sys.stderr.write("WebServer error: {0}".format(e))
         sys.exit(1)
-
     sys.exit(0)
 
 
