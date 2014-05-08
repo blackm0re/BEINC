@@ -46,7 +46,6 @@ BEINC_POLICY_ALL = 1
 BEINC_POLICY_LIST_ONLY = 2
 
 
-
 class ValidHTTPSConnection(httplib.HTTPConnection):
     """
     Implements a simple CERT verification functionality
@@ -68,7 +67,6 @@ class ValidHTTPSConnection(httplib.HTTPConnection):
                                     cert_reqs=ssl.CERT_REQUIRED)
 
 
-
 class ValidHTTPSHandler(urllib2.HTTPSHandler):
     """
     Implements a simple CERT verification functionality
@@ -78,11 +76,10 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
             return self.do_open(ValidHTTPSConnection, req)
 
 
-
 class WeechatTarget(object):
     """
     """
-    
+
     def __init__(self, target_dict):
         """
         target_dict: the config-dictionary node that represents this instance
@@ -92,22 +89,18 @@ class WeechatTarget(object):
             ''.join([chr(random.randrange(97, 123)) for x in range(4)]))
         self.__url = target_dict.get('target_url')
         self.__password = target_dict.get('target_password')
-
         self.__pm_title_template = target_dict.get('pm_title_template',
                                                    '%s @ %S')
         self.__pm_message_template = target_dict.get('pm_message_template',
                                                      '%m')
-
         self.__cm_title_template = target_dict.get('cm_title_template',
                                                    '%c @ %S')
         self.__cm_message_template = target_dict.get('cm_message_template',
                                                      '%s -> %m')
-
         self.__nm_title_template = target_dict.get('nm_title_template',
                                                    '%c @ %S')
         self.__nm_message_template = target_dict.get('nm_message_template',
                                                      '%s -> %m')
-
         self.__chans = set(target_dict.get('channel_list', list()))
         self.__nicks = set(target_dict.get('nick_list', list()))
         self.__chan_messages_policy = int(target_dict.get(
@@ -125,62 +118,54 @@ class WeechatTarget(object):
         self.__debug = bool(target_dict.get('debug', False))
         self.__enabled = bool(target_dict.get('enabled', True))
 
-
     @property
     def name(self):
         """
         """
         return self.__name
 
-
     @property
     def chans(self):
-    	"""
-    	"""
+        """
+        """
         return self.__chans
-    
-    
+
     @property
     def nicks(self):
-    	"""
-    	"""
+        """
+        """
         return self.__nicks
-    
 
     @property
     def channel_messages_policy(self):
-    	"""
-    	"""
+        """
+        """
         return self.__chan_messages_policy
-
 
     @property
     def private_messages_policy(self):
-    	"""
-    	"""
+        """
+        """
         return self.__priv_messages_policy
-
 
     @property
     def notifications_policy(self):
-    	"""
-    	"""
+        """
+        """
         return self.__notifications_policy
-    
 
     @property
     def enabled(self):
-    	"""
-    	"""
+        """
+        """
         return self.__enabled
-    
+
     @enabled.setter
     def enabled(self, value):
-    	"""
-    	"""
+        """
+        """
         self.__enabled = value
-    
-    
+
     def __repr__(self):
         """
         """
@@ -196,15 +181,15 @@ class WeechatTarget(object):
                 self.__notifications_policy,
                 'yes' if self.__enabled else 'no')
 
-
     def send_private_message_notification(self, values):
         """
         """
         try:
             title_str = self.__fetch_formatted_str(self.__pm_title_template,
                                                    values)
-            message_str = self.__fetch_formatted_str(self.__pm_message_template,
-                                                     values)
+            message_str = self.__fetch_formatted_str(
+                self.__pm_message_template,
+                values)
             post_values = {'title': title_str,
                            'message': message_str,
                            'password': self.__password}
@@ -219,16 +204,16 @@ class WeechatTarget(object):
                 beinc_prnt(
                     'BEINC DEBUG: send_private_message_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
-
 
     def send_channel_message_notification(self, values):
         """
         """
         try:
             title_str = self.__fetch_formatted_str(self.__cm_title_template,
-                                               values)
-            message_str = self.__fetch_formatted_str(self.__cm_message_template,
-                                                 values)
+                                                   values)
+            message_str = self.__fetch_formatted_str(
+                self.__cm_message_template,
+                values)
             post_values = {'title': title_str,
                            'message': message_str,
                            'password': self.__password}
@@ -243,16 +228,16 @@ class WeechatTarget(object):
                 beinc_prnt(
                     'BEINC DEBUG: send_channel_message_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
-
 
     def send_notify_message_notification(self, values):
         """
         """
         try:
             title_str = self.__fetch_formatted_str(self.__nm_title_template,
-                                               values)
-            message_str = self.__fetch_formatted_str(self.__nm_message_template,
-                                                 values)
+                                                   values)
+            message_str = self.__fetch_formatted_str(
+                self.__nm_message_template,
+                values)
             post_values = {'title': title_str,
                            'message': message_str,
                            'password': self.__password}
@@ -267,7 +252,6 @@ class WeechatTarget(object):
                 beinc_prnt(
                     'BEINC DEBUG: send_notify_message_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
-
 
     def __fetch_formatted_str(self, template, values):
         """
@@ -284,16 +268,13 @@ class WeechatTarget(object):
             template = template.replace(key, value)
         return template
 
-
     def __send_beinc_message(self, data):
         """
         the function implements the BEINC "protocol" by generating a simple
         HTTP request
         """
-
         try:
             req = urllib2.Request(self.__url, data)
-
             if self.__cert_file:
                 opener = urllib2.build_opener(ValidHTTPSHandler)
                 response = opener.open(req)
@@ -307,10 +288,12 @@ class WeechatTarget(object):
             if self.__debug:
                 beinc_prnt(
                     'BEINC DEBUG: send_beinc_message-ERROR for "{0}": {1} ->'
-                    ' ({2} - {3})'.format(self.__name, e.url, e.code, e.reason))
+                    ' ({2} - {3})'.format(self.__name,
+                                          e.url,
+                                          e.code,
+                                          e.reason))
         # all other exception should be handled by the caller
         return False
-
 
 
 def beinc_prnt(message_str):
@@ -325,12 +308,11 @@ def beinc_prnt(message_str):
 
 def beinc_cmd_target_handler(cmd_tokens):
     """
-    handles: '/beinc target' command actions 
+    handles: '/beinc target' command actions
     """
     if not cmd_tokens or cmd_tokens[0] not in ['list', 'enable', 'disable']:
         beinc_prnt('beinc target [ list | enable <name> | disable <name> ]')
         return weechat.WEECHAT_RC_OK
-
     if cmd_tokens[0] == 'list':
         beinc_prnt('--- Targets ---')
         for target in target_list:
@@ -360,17 +342,14 @@ def beinc_cmd_target_handler(cmd_tokens):
                 break
         else:
             beinc_prnt('no matching target for "{0}"'.format(name))
-
     return weechat.WEECHAT_RC_OK
 
 
 def beinc_command(data, buffer_obj, args):
     global enabled
     cmd_tokens = args.split()
-
     if not cmd_tokens:
         return weechat.WEECHAT_RC_OK
-
     if args == 'on':
         enabled = True
         beinc_prnt('BEINC on')
@@ -387,17 +366,14 @@ def beinc_command(data, buffer_obj, args):
             str(data),
             str(cmd_tokens),
             str(args)))
-
     return weechat.WEECHAT_RC_OK
 
 
 def beinc_privmsg_handler(data, signal, signal_data):
     if not enabled:
         return weechat.WEECHAT_RC_OK
-
     prvmsg_dict = weechat.info_get_hashtable('irc_message_parse',
-                                             {'message': signal_data })
-
+                                             {'message': signal_data})
     # packing the privmsg handler values
     ph_values = dict()
     ph_values['server'] = signal.split(',')[0]
@@ -406,70 +382,75 @@ def beinc_privmsg_handler(data, signal, signal_data):
     ph_values['source_nick'] = prvmsg_dict['nick']
     ph_values['message'] = ':'.join(
         prvmsg_dict['arguments'].split(':')[1:]).strip()
-
     if ph_values['channel'] == ph_values['own_nick']:
         # priv messages are handled here
         if not global_values['global_private_messages_policy']:
             return weechat.WEECHAT_RC_OK
-
-        if global_values['global_private_messages_policy'] == BEINC_POLICY_LIST_ONLY \
-           and '{0}.{1}'.format(
-               ph_values['server'], 
-               ph_values['source_nick'].lower()) not in global_values['global_nicks']:
+        p_messages_policy = global_values['global_private_messages_policy']
+        if p_messages_policy == BEINC_POLICY_LIST_ONLY and
+        '{0}.{1}'.format(
+            ph_values['server'],
+            ph_values['source_nick'].lower()
+        ) not in global_values['global_nicks']:
             return weechat.WEECHAT_RC_OK
-
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.private_messages_policy == BEINC_POLICY_ALL or (
-                    target.private_messages_policy == BEINC_POLICY_LIST_ONLY \
-                    and '{0}.{1}'.format(
-                        ph_values['server'],
-                        ph_values['source_nick'].lower()) in target.nicks):
+            if target.private_messages_policy == BEINC_POLICY_ALL or
+            (
+                target.private_messages_policy == BEINC_POLICY_LIST_ONLY and
+                '{0}.{1}'.format(
+                    ph_values['server'],
+                    ph_values['source_nick'].lower()) in target.nicks
+            ):
                 target.send_private_message_notification(ph_values)
-
-    elif ph_values['own_nick'].lower() in ph_values['message'].lower():  
+    elif ph_values['own_nick'].lower() in ph_values['message'].lower():
         # notify messages are handled here
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
-
-        if global_values['global_notifications_policy'] == BEINC_POLICY_LIST_ONLY \
-           and '{0}.{1}'.format(
-               ph_values['server'], 
-               ph_values['channel'].lower()) not in global_values['global_chans']:
+        notifications_policy = global_values['global_notifications_policy']
+        if notifications_policy == BEINC_POLICY_LIST_ONLY and
+        (
+            '{0}.{1}'.format(
+                ph_values['server'],
+                ph_values['channel'].lower()
+            ) not in global_values['global_chans']
+        ):
             return weechat.WEECHAT_RC_OK
-        
         for target in target_list:
             if not target.enabled:
                 continue
             if target.notifications_policy == BEINC_POLICY_ALL or (
-                    target.notifications_policy == BEINC_POLICY_LIST_ONLY \
-                    and '{0}.{1}'.format(
+                    target.notifications_policy == BEINC_POLICY_LIST_ONLY and
+                    '{0}.{1}'.format(
                         ph_values['server'],
-                        ph_values['channel'].lower()) in target.chans):
+                        ph_values['channel'].lower()) in target.chans
+            ):
                 target.send_notify_message_notification(ph_values)
-
-    elif global_values['global_channel_messages_policy']:  
+    elif global_values['global_channel_messages_policy']:
         # chan messages are handled here
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
-
-        if global_values['global_channel_messages_policy'] == BEINC_POLICY_LIST_ONLY \
-           and '{0}.{1}'.format(
-               ph_values['server'], 
-               ph_values['channel'].lower()) not in global_values['global_chans']:
+        c_messages_policy = global_values['global_channel_messages_policy']
+        if c_messages_policy == BEINC_POLICY_LIST_ONLY and
+        (
+            '{0}.{1}'.format(
+                ph_values['server'],
+                ph_values['channel'].lower()
+            ) not in global_values['global_chans']
+        ):
             return weechat.WEECHAT_RC_OK
-
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.channel_messages_policy == BEINC_POLICY_ALL or (
-                    target.channel_messages_policy == BEINC_POLICY_LIST_ONLY \
-                    and '{0}.{1}'.format(
-                        ph_values['server'],
-                        ph_values['channel'].lower()) in target.chans):
+            if target.channel_messages_policy == BEINC_POLICY_ALL or
+            (
+                target.channel_messages_policy == BEINC_POLICY_LIST_ONLY and
+                '{0}.{1}'.format(
+                    ph_values['server'],
+                    ph_values['channel'].lower()) in target.chans
+            ):
                 target.send_channel_message_notification(ph_values)
-
     return weechat.WEECHAT_RC_OK
 
 
@@ -484,7 +465,6 @@ def beinc_init():
     global_values['global_chans'] = set()
     global_values['global_nicks'] = set()
     target_list = list()
-
     custom_error = ''
     global_values['global_channel_messages_policy'] = False
     global_values['global_private_messages_policy'] = False
@@ -496,14 +476,13 @@ def beinc_init():
             weechat.info_get('weechat_dir', ''),
             'beinc.json')
         beinc_prnt('Parsing {0}...'.format(beinc_config_file_str))
-
         custom_error = 'load error'
         with open(beinc_config_file_str, 'r') as fp:
             config_dict = json.load(fp)
-
         custom_error = 'target parse error'
-        global_values['use_current_buffer'] = bool(config_dict['irc_client'].get(
-            'use_current_buffer', False))
+        global_values['use_current_buffer'] = bool(
+            config_dict['irc_client'].get(
+                'use_current_buffer', False))
         for target in config_dict['irc_client']['targets']:
             try:
                 new_target = WeechatTarget(target)
@@ -518,32 +497,27 @@ def beinc_init():
                 global_values['global_private_messages_policy'] = True
             if new_target.notifications_policy:
                 global_values['global_notifications_policy'] = True
-
             target_list.append(new_target)
             beinc_prnt('BEINC target "{0}" added'.format(new_target.name))
-
         beinc_prnt('Done!')
-
     except Exception as e:
         beinc_prnt('ERROR: unable to parse {0}: {1} - {2}'.format(
             beinc_config_file_str, custom_error, e))
         enabled = False
-
         # do not return error / exit the script
         # in order to give a smoother opportunity to fix a 'broken' config
         return weechat.WEECHAT_RC_OK
-    
     return weechat.WEECHAT_RC_OK
 
 
-
-weechat.register('beinc_weechat',
-                 'Simeon Simeonov',
-                 '1.0',
-                 'GPL3',
-                 'Blackmore\'s Extended IRC Notification Collection (Weechat Client)',
-                 '',
-                 '')
+weechat.register(
+    'beinc_weechat',
+    'Simeon Simeonov',
+    '1.0',
+    'GPL3',
+    'Blackmore\'s Extended IRC Notification Collection (Weechat Client)',
+    '',
+    '')
 version = weechat.info_get('version_number', '') or 0
 if int(version) < 0x00040000:
     weechat.prnt('', 'WeeChat version >= 0.4.0 is required to run beinc')

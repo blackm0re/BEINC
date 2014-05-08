@@ -55,7 +55,6 @@ class ValidHTTPSConnection(httplib.HTTPConnection):
                                     cert_reqs=ssl.CERT_REQUIRED)
 
 
-
 class ValidHTTPSHandler(urllib2.HTTPSHandler):
     """
     Implements a simple CERT verification functionality
@@ -63,7 +62,6 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
 
     def https_open(self, req):
         return self.do_open(ValidHTTPSConnection, req)
-
 
 
 def action_push(args):
@@ -90,66 +88,57 @@ def action_push(args):
         print('Body:\n{0}'.format(response.read()))
         response.close()
     except urllib2.HTTPError as e:
-        sys.stderr.write('BEINC-server error ({0} - {1})\n'.format(e.code, e.reason))
+        sys.stderr.write('BEINC-server error ({0} - {1})\n'.format(e.code,
+                                                                   e.reason))
     except Exception as e:
         sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
 
 
 def main():
-    
     parser = argparse.ArgumentParser(
         description='The following options are available')
-
     parser.add_argument('url',
                         metavar='URL',
                         type=str,
                         #dest='url',
                         #required=True,
                         help='Destination URL')
-
     parser.add_argument('-c', '--cert-file',
                         metavar='FILE',
                         type=str,
                         dest='cert',
                         default='',
                         help='BEINC CA-cert to check the server-cert against')
-
     parser.add_argument('-m', '--message',
                         metavar='MESSAGE',
                         type=str,
                         dest='message',
                         default='BEINC message',
                         help='BEINC message')
-
     parser.add_argument('-p', '--password',
                         metavar='PASSWORD',
                         type=str,
                         dest='password',
                         default='',
                         help='Password')
-
     parser.add_argument('-t', '--title',
                         metavar='TITLE',
                         type=str,
                         dest='title',
                         default='BEINC title',
                         help='BEINC title')
-
     parser.add_argument('-v', '--version',
                         action='version',
                         version='%(prog)s {0}'.format(__version__),
                         help='display program-version and exit')
-
     args = parser.parse_args()
-
     if not args.password:
         try:
             args.password = getpass.getpass()
         except Exception as e:
             sys.stderr.write('Prompt terminated\n')
             sys.exit(errno.EACCES)
-
     action_push(args)
     sys.exit(0)
 
