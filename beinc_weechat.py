@@ -194,7 +194,7 @@ class WeechatTarget(object):
                            'message': message_str,
                            'password': self.__password}
             data = urllib.urlencode(post_values)
-            if self.__send_beinc_message(data) and self.__debug:
+            if not self.__send_beinc_message(data) and self.__debug:
                 beinc_prnt(
                     'BEINC DEBUG: send_private_message_notification-ERROR '
                     'for "{0}": __send_beinc_message -> False'.format(
@@ -218,7 +218,7 @@ class WeechatTarget(object):
                            'message': message_str,
                            'password': self.__password}
             data = urllib.urlencode(post_values)
-            if self.__send_beinc_message(data) and self.__debug:
+            if not self.__send_beinc_message(data) and self.__debug:
                 beinc_prnt(
                     'BEINC DEBUG: send_channel_message_notification-ERROR '
                     'for "{0}": __send_beinc_message -> False'.format(
@@ -242,7 +242,7 @@ class WeechatTarget(object):
                            'message': message_str,
                            'password': self.__password}
             data = urllib.urlencode(post_values)
-            if self.__send_beinc_message(data) and self.__debug:
+            if not self.__send_beinc_message(data) and self.__debug:
                 beinc_prnt(
                     'BEINC DEBUG: send_notify_message_notification-ERROR '
                     'for "{0}": __send_beinc_message -> False'.format(
@@ -387,7 +387,7 @@ def beinc_privmsg_handler(data, signal, signal_data):
         if not global_values['global_private_messages_policy']:
             return weechat.WEECHAT_RC_OK
         p_messages_policy = global_values['global_private_messages_policy']
-        if p_messages_policy == BEINC_POLICY_LIST_ONLY and
+        if p_messages_policy == BEINC_POLICY_LIST_ONLY and \
         '{0}.{1}'.format(
             ph_values['server'],
             ph_values['source_nick'].lower()
@@ -396,9 +396,9 @@ def beinc_privmsg_handler(data, signal, signal_data):
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.private_messages_policy == BEINC_POLICY_ALL or
+            if target.private_messages_policy == BEINC_POLICY_ALL or \
             (
-                target.private_messages_policy == BEINC_POLICY_LIST_ONLY and
+                target.private_messages_policy == BEINC_POLICY_LIST_ONLY and \
                 '{0}.{1}'.format(
                     ph_values['server'],
                     ph_values['source_nick'].lower()) in target.nicks
@@ -409,7 +409,7 @@ def beinc_privmsg_handler(data, signal, signal_data):
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
         notifications_policy = global_values['global_notifications_policy']
-        if notifications_policy == BEINC_POLICY_LIST_ONLY and
+        if notifications_policy == BEINC_POLICY_LIST_ONLY and \
         (
             '{0}.{1}'.format(
                 ph_values['server'],
@@ -432,7 +432,7 @@ def beinc_privmsg_handler(data, signal, signal_data):
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
         c_messages_policy = global_values['global_channel_messages_policy']
-        if c_messages_policy == BEINC_POLICY_LIST_ONLY and
+        if c_messages_policy == BEINC_POLICY_LIST_ONLY and \
         (
             '{0}.{1}'.format(
                 ph_values['server'],
@@ -443,9 +443,9 @@ def beinc_privmsg_handler(data, signal, signal_data):
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.channel_messages_policy == BEINC_POLICY_ALL or
+            if target.channel_messages_policy == BEINC_POLICY_ALL or \
             (
-                target.channel_messages_policy == BEINC_POLICY_LIST_ONLY and
+                target.channel_messages_policy == BEINC_POLICY_LIST_ONLY and \
                 '{0}.{1}'.format(
                     ph_values['server'],
                     ph_values['channel'].lower()) in target.chans

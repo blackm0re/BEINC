@@ -275,12 +275,13 @@ def main():
         sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
                                                            e))
         sys.exit(errno.EIO)
+    ssl_module = config_dict['server']['general']['ssl_module'].encode('utf-8')
     ssl_certificate = config_dict['server']['general']['ssl_certificate']
     ssl_private_key = config_dict['server']['general']['ssl_private_key']
     cherrypy.config.update({
         'server.socket_host': args.hostname,
         'server.socket_port': args.port,
-        'server.ssl_module': config_dict['server']['general']['ssl_module'],
+        'server.ssl_module': ssl_module,
         'server.ssl_certificate': ssl_certificate,
         'server.ssl_private_key': ssl_private_key,
         'tools.encode.on': True,

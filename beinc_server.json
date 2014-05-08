@@ -44,15 +44,5 @@
             }
         ]
     },
-    "poller": {
-        "target_url": "https://10.0.0.2:9898/pull/secondtest",
-        "target_password": "changeme",
-        "target_cert_file": "",
-        "polling_interval": 5,
-        "osd_system": "pynotify",
-        "osd_timeout": 5000,
-        "daemonize": 1,
-        "debug": 1,
-    },
     "config_version": 1
 }
