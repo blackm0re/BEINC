@@ -171,7 +171,7 @@ class WeechatTarget(object):
         """
         return 'name: {0}\nurl: {1}\nchannel_list: {2}\nnick_list: {3}\n'\
             'channel_messages_policy: {4}\nprivate_messages_policy: {5}\n'\
-            'notifications_policy: {6}\nenabled: {7}\n\n'.format(
+            'notifications_policy: {6}\nenabled: {7}\ndebug: {8}\n\n'.format(
                 self.__name,
                 self.__url,
                 ', '.join(self.__chans),
@@ -179,7 +179,8 @@ class WeechatTarget(object):
                 self.__chan_messages_policy,
                 self.__priv_messages_policy,
                 self.__notifications_policy,
-                'yes' if self.__enabled else 'no')
+                'yes' if self.__enabled else 'no',
+                'yes' if self.__debug else 'no')
 
     def send_private_message_notification(self, values):
         """
