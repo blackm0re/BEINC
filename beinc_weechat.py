@@ -256,14 +256,15 @@ class WeechatTarget(object):
     def __fetch_formatted_str(self, template, values):
         """
         """
+        template = unicode(template)
         timestamp = datetime.datetime.now().strftime(self.__timestamp_format)
-        replacements = {'%S': values['server'],
-                        '%s': values['source_nick'],
-                        '%c': values['channel'],
-                        '%m': values['message'],
-                        '%t': timestamp,
-                        '%p': 'BEINC',
-                        '%n': values['own_nick']}
+        replacements = {u'%S': values['server'].decode('utf-8'),
+                        u'%s': values['source_nick'].decode('utf-8'),
+                        u'%c': values['channel'].decode('utf-8'),
+                        u'%m': values['message'].decode('utf-8'),
+                        u'%t': timestamp.decode('utf-8'),
+                        u'%p': u'BEINC',
+                        u'%n': values['own_nick'].decode('utf-8')}
         for key, value in replacements.items():
             template = template.replace(key, value)
         return template.encode('utf-8')
@@ -382,8 +383,7 @@ def beinc_privmsg_handler(data, signal, signal_data):
     ph_values['own_nick'] = weechat.info_get('irc_nick', ph_values['server'])
     ph_values['channel'] = prvmsg_dict['arguments'].split(':')[0].strip()
     ph_values['source_nick'] = prvmsg_dict['nick']
-    ph_values['message'] = ':'.join(
-        prvmsg_dict['arguments'].split(':')[1:]).strip().encode('utf-8')
+    ph_values['message'] = ':'.join(prvmsg_dict['arguments'].split(':')[1:]).strip()
     if ph_values['channel'] == ph_values['own_nick']:
         # priv messages are handled here
         if not global_values['global_private_messages_policy']:
@@ -480,7 +480,7 @@ def beinc_init():
         beinc_prnt('Parsing {0}...'.format(beinc_config_file_str))
         custom_error = 'load error'
         with open(beinc_config_file_str, 'r') as fp:
-            config_dict = json.load(fp)
+            config_dict = json.load(fp, encoding='utf-8')
         custom_error = 'target parse error'
         global_values['use_current_buffer'] = bool(
             config_dict['irc_client'].get(
