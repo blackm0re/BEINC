@@ -474,7 +474,7 @@ def beinc_init():
     try:
         beinc_config_file_str = os.path.join(
             weechat.info_get('weechat_dir', ''),
-            'beinc.json')
+            'beinc_weechat.json')
         beinc_prnt('Parsing {0}...'.format(beinc_config_file_str))
         custom_error = 'load error'
         with open(beinc_config_file_str, 'r') as fp:
