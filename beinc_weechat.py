@@ -253,6 +253,25 @@ class WeechatTarget(object):
                     'BEINC DEBUG: send_notify_message_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
 
+    def send_broadcast_notification(self, message):
+        """
+        """
+        try:
+            post_values = {'title': 'BEINC broadcast',
+                           'message': message,
+                           'password': self.__password}
+            data = urllib.urlencode(post_values)
+            if not self.__send_beinc_message(data) and self.__debug:
+                beinc_prnt(
+                    'BEINC DEBUG: send_broadcast_notification-ERROR '
+                    'for "{0}": __send_beinc_message -> False'.format(
+                        self.__name))
+        except Exception as e:
+            if self.__debug:
+                beinc_prnt(
+                    'BEINC DEBUG: send_broadcast_notification-ERROR '
+                    'for "{0}": {1}'.format(self.__name, e))
+
     def __fetch_formatted_str(self, template, values):
         """
         """
@@ -309,6 +328,19 @@ def beinc_prnt(message_str):
         weechat.prnt('', message_str)
 
 
+def beinc_cmd_broadcast_handler(cmd_tokens):
+    """
+    handles: '/beinc broadcast' command actions
+    """
+    if not cmd_tokens:
+        beinc_prnt('beinc broadcast <message>')
+        return weechat.WEECHAT_RC_OK
+    for target in target_list:
+        if target.enabled:
+            target.send_broadcast_notification(' '.join(cmd_tokens))
+    return weechat.WEECHAT_RC_OK
+
+
 def beinc_cmd_target_handler(cmd_tokens):
     """
     handles: '/beinc target' command actions
@@ -362,6 +394,8 @@ def beinc_command(data, buffer_obj, args):
     elif args == 'reload':
         beinc_prnt('Reloading BEINC...')
         beinc_init()
+    elif cmd_tokens[0] == 'broadcast':
+        return beinc_cmd_broadcast_handler(cmd_tokens[1:])
     elif cmd_tokens[0] == 'target':
         return beinc_cmd_target_handler(cmd_tokens[1:])
     else:
@@ -383,40 +417,39 @@ def beinc_privmsg_handler(data, signal, signal_data):
     ph_values['own_nick'] = weechat.info_get('irc_nick', ph_values['server'])
     ph_values['channel'] = prvmsg_dict['arguments'].split(':')[0].strip()
     ph_values['source_nick'] = prvmsg_dict['nick']
-    ph_values['message'] = ':'.join(prvmsg_dict['arguments'].split(':')[1:]).strip()
+    ph_values['message'] = ':'.join(
+        prvmsg_dict['arguments'].split(':')[1:]).strip()
     if ph_values['channel'] == ph_values['own_nick']:
         # priv messages are handled here
         if not global_values['global_private_messages_policy']:
             return weechat.WEECHAT_RC_OK
         p_messages_policy = global_values['global_private_messages_policy']
         if p_messages_policy == BEINC_POLICY_LIST_ONLY and \
-        '{0}.{1}'.format(
-            ph_values['server'],
-            ph_values['source_nick'].lower()
-        ) not in global_values['global_nicks']:
+           '{0}.{1}'.format(
+               ph_values['server'],
+               ph_values['source_nick'].lower()
+           ) not in global_values['global_nicks']:
             return weechat.WEECHAT_RC_OK
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.private_messages_policy == BEINC_POLICY_ALL or \
-            (
-                target.private_messages_policy == BEINC_POLICY_LIST_ONLY and \
-                '{0}.{1}'.format(
-                    ph_values['server'],
-                    ph_values['source_nick'].lower()) in target.nicks
-            ):
+            p_messages_policy = target.private_messages_policy
+            if p_messages_policy == BEINC_POLICY_ALL or (
+                    p_messages_policy == BEINC_POLICY_LIST_ONLY and
+                    '{0}.{1}'.format(
+                        ph_values['server'],
+                        ph_values['source_nick'].lower()) in target.nicks):
                 target.send_private_message_notification(ph_values)
     elif ph_values['own_nick'].lower() in ph_values['message'].lower():
         # notify messages are handled here
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
         notifications_policy = global_values['global_notifications_policy']
-        if notifications_policy == BEINC_POLICY_LIST_ONLY and \
-        (
-            '{0}.{1}'.format(
-                ph_values['server'],
-                ph_values['channel'].lower()
-            ) not in global_values['global_chans']
+        if notifications_policy == BEINC_POLICY_LIST_ONLY and (
+                '{0}.{1}'.format(
+                    ph_values['server'],
+                    ph_values['channel'].lower()
+                ) not in global_values['global_chans']
         ):
             return weechat.WEECHAT_RC_OK
         for target in target_list:
@@ -434,24 +467,22 @@ def beinc_privmsg_handler(data, signal, signal_data):
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
         c_messages_policy = global_values['global_channel_messages_policy']
-        if c_messages_policy == BEINC_POLICY_LIST_ONLY and \
-        (
-            '{0}.{1}'.format(
-                ph_values['server'],
-                ph_values['channel'].lower()
-            ) not in global_values['global_chans']
+        if c_messages_policy == BEINC_POLICY_LIST_ONLY and (
+                '{0}.{1}'.format(
+                    ph_values['server'],
+                    ph_values['channel'].lower()
+                ) not in global_values['global_chans']
         ):
             return weechat.WEECHAT_RC_OK
         for target in target_list:
             if not target.enabled:
                 continue
-            if target.channel_messages_policy == BEINC_POLICY_ALL or \
-            (
-                target.channel_messages_policy == BEINC_POLICY_LIST_ONLY and \
-                '{0}.{1}'.format(
-                    ph_values['server'],
-                    ph_values['channel'].lower()) in target.chans
-            ):
+            c_messages_policy = target.channel_messages_policy
+            if c_messages_policy == BEINC_POLICY_ALL or (
+                    c_messages_policy == BEINC_POLICY_LIST_ONLY and
+                    '{0}.{1}'.format(
+                        ph_values['server'],
+                        ph_values['channel'].lower()) in target.chans):
                 target.send_channel_message_notification(ph_values)
     return weechat.WEECHAT_RC_OK
 
