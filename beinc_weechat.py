@@ -266,7 +266,7 @@ class WeechatTarget(object):
                         '%n': values['own_nick']}
         for key, value in replacements.items():
             template = template.replace(key, value)
-        return template
+        return template.encode('utf-8')
 
     def __send_beinc_message(self, data):
         """
@@ -276,6 +276,8 @@ class WeechatTarget(object):
         try:
             req = urllib2.Request(self.__url, data)
             if self.__cert_file:
+                global global_beinc_cert_file
+                global_beinc_cert_file = self.__cert_file
                 opener = urllib2.build_opener(ValidHTTPSHandler)
                 response = opener.open(req)
             else:
@@ -381,7 +383,7 @@ def beinc_privmsg_handler(data, signal, signal_data):
     ph_values['channel'] = prvmsg_dict['arguments'].split(':')[0].strip()
     ph_values['source_nick'] = prvmsg_dict['nick']
     ph_values['message'] = ':'.join(
-        prvmsg_dict['arguments'].split(':')[1:]).strip()
+        prvmsg_dict['arguments'].split(':')[1:]).strip().encode('utf-8')
     if ph_values['channel'] == ph_values['own_nick']:
         # priv messages are handled here
         if not global_values['global_private_messages_policy']:

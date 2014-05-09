@@ -35,7 +35,8 @@ import urllib2
 try:
     import pynotify
 except ImportError as e:
-    sys.stderr.write('A working pynotify library is required by BEINC-poller\n')
+    sys.stderr.write(
+        'A working pynotify library is required by BEINC-poller\n')
     sys.exit(1)
 
 
@@ -74,7 +75,7 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
         return self.do_open(ValidHTTPSConnection, req)
 
 
-def poll_notifications(scheduler, args):
+def poll_notifications(scheduler, args, notification_obj):
     """
     """
     try:
@@ -93,13 +94,16 @@ def poll_notifications(scheduler, args):
         if res_code == 200 and args.debug:
             print('Server responded: OK')
             print('Body:\n{0}'.format(res_str))
-        res_list = json.loads(res_str)
-        print(type(res_list))
         response.close()
+        res_list = json.loads(res_str)
+        for entry in res_list:
+            notification_obj.set_properties(summary=entry.get('title', ''),
+                                            body=entry.get('message', ''))
+            notification_obj.show()
         scheduler.enter(args.frequency,
-                        1, 
+                        1,
                         poll_notifications,
-                        (scheduler, args))
+                        (scheduler, args, notification_obj))
     except urllib2.HTTPError as e:
         sys.stderr.write('BEINC-server error ({0} - {1})\n'.format(e.code,
                                                                    e.reason))
@@ -173,8 +177,22 @@ def main():
         sys.stderr.write('There was a problem with libnotify\n')
         sys.exit(1)
 
+    try:
+        notification_obj = pynotify.Notification(' ')
+        notification_obj.set_timeout(args.osd_timeout)
+        notification_obj.set_property(
+            'app_name',
+            '{0} {1}'.format(sys.argv[0], __version__))
+    except Exception as e:
+        sys.stderr.write(
+            'Unable to create pynotify Notification-object: {0}\n'.format(e))
+        sys.exit(1)
+
     sc = sched.scheduler(time.time, time.sleep)
-    sc.enter(args.frequency, 1, poll_notifications, (sc, args))
+    sc.enter(args.frequency,
+             1,
+             poll_notifications,
+             (sc, args, notification_obj))
     sc.run()
 
 
