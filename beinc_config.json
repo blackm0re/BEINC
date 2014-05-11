@@ -11,7 +11,13 @@
                 "name": "test",
                 "password": "changeme",
                 "osd_system": "pynotify",
-                "osd_timeout": 5000,
+                "osd_timeout": 5,
+                "pyosd_font": "",
+                "pyosd_vertical_offset": 120,
+                "pyosd_horizontal_offset": 30,
+                "pyosd_align": "left",
+                "pyosd_position": "bottom",
+                "pyosd_color": "blue",
                 "queue_size": 4
             }
         ]

@@ -35,9 +35,18 @@ import urllib2
 try:
     import pynotify
 except ImportError as e:
-    sys.stderr.write(
-        'A working pynotify library is required by BEINC-poller\n')
-    sys.exit(1)
+    pynotify = None
+
+try:
+    import pyosd
+    pyosd_positions = {'top': pyosd.POS_TOP,
+                       'middle': pyosd.POS_MID,
+                       'bottom': pyosd.POS_BOT}
+    pyosd_alignments = {'left': pyosd.ALIGN_LEFT,
+                        'center': pyosd.ALIGN_CENTER,
+                        'right': pyosd.ALIGN_RIGHT}
+except ImportError as e:
+    pyosd = None
 
 
 __author__ = 'Simeon Simeonov'
@@ -97,9 +106,16 @@ def poll_notifications(scheduler, args, notification_obj):
         response.close()
         res_list = json.loads(res_str)
         for entry in res_list:
-            notification_obj.set_properties(summary=entry.get('title', ''),
-                                            body=entry.get('message', ''))
-            notification_obj.show()
+            title = entry.get('title', '')
+            message = entry.get('message', '')
+            if args.osd_sys == 'pyosd':
+                notification_obj.display(title, line=0)
+                notification_obj.display(message, line=1)
+            else:
+                notification_obj.set_properties(
+                    summary=title,
+                    body=message)
+                notification_obj.show()
         scheduler.enter(args.frequency,
                         1,
                         poll_notifications,
@@ -121,6 +137,13 @@ def main():
         type=str,
         help='BEINC destination URL')
     parser.add_argument(
+        '-a', '--align',
+        metavar='ALIGNMENT',
+        type=str,
+        dest='alignment',
+        default='left',
+        help='Alignment for "pyosd" (default: "left")')
+    parser.add_argument(
         '-c', '--cert-file',
         metavar='FILE',
         type=str,
@@ -128,17 +151,18 @@ def main():
         default='',
         help='BEINC CA-cert to check the server-cert against (default: None)')
     parser.add_argument(
-        '-d',
-        action='store_true',
-        dest='daemonize',
-        default=False,
-        help='Run the poller-process in the background')
+        '-C', '--color',
+        metavar='COLOR',
+        type=str,
+        dest='color',
+        default='blue',
+        help='Color for "pyosd" (default: "blue")')
     parser.add_argument(
-        '-D', '--debug',
+        '-d', '--debug',
         action='store_true',
         dest='debug',
         default=False,
-        help='Run the poller-process in debug-mode (disables daemonize)')
+        help='Run the poller-process in debug-mode')
     parser.add_argument(
         '-f', '--frequency',
         metavar='SECONDS',
@@ -147,47 +171,120 @@ def main():
         default=10,
         help='Polling frequency in seconds (default: 10)')
     parser.add_argument(
-        '-p', '--password',
+        '--font',
+        metavar='FONT',
+        type=str,
+        dest='font',
+        default=None,
+        help='Custom font for "pyosd" (default: Default font)')
+    parser.add_argument(
+        '--h-offset',
+        metavar='OFFSET',
+        type=int,
+        dest='hoffset',
+        default=30,
+        help='Horizontal offset for "pyosd" (default: 30)')
+    parser.add_argument(
+        '-o', '--osd-system',
+        metavar='SYSTEM',
+        type=str,
+        dest='osd_sys',
+        default='pynotify',
+        help='BEINC osd-system ("pynotify" or "pyosd") (default: pynotify)')
+    parser.add_argument(
+        '-P', '--password',
         metavar='PASSWORD',
         type=str,
         dest='password',
         default='',
         help='BEINC taget-password (default & recommended: prompt for passwd)')
     parser.add_argument(
+        '-p', '--position',
+        metavar='POSITION',
+        type=str,
+        dest='position',
+        default='bottom',
+        help='Position for "pyosd" (default: "bottom")')
+    parser.add_argument(
         '-t', '--osd-timeout',
-        metavar='MILLISECONDS',
+        metavar='SECONDS',
         type=int,
         dest='osd_timeout',
-        default=5000,
-        help='OSD timeout (default: 5000)')
+        default=5,
+        help='OSD timeout (default: 5)')
     parser.add_argument(
         '-v', '--version',
         action='version',
         version='%(prog)s {0}'.format(__version__),
         help='display program-version and exit')
+    parser.add_argument(
+        '--v-offset',
+        metavar='OFFSET',
+        type=int,
+        dest='voffset',
+        default=120,
+        help='Vertical offset for "pyosd" (default: 120)')
     args = parser.parse_args()
+    if args.osd_sys == 'pyosd':
+        if not pyosd:
+            sys.stderr.write(
+                'Could not load "pyosd".\n'
+                'Please install "pyosd" or use a different osd-system!\n'
+                'Terminating...\n')
+            sys.exit(1)
+        try:
+            notification_obj = pyosd.osd()
+            notification_obj.set_timeout(args.osd_timeout)
+            if args.font:
+                notification_obj.set_font(args.font)
+            notification_obj.set_vertical_offset(args.voffset)
+            notification_obj.set_horizontal_offset(args.hoffset)
+            notification_obj.set_align(
+                pyosd_alignments.get(args.alignment, pyosd.ALIGN_LEFT))
+            notification_obj.set_pos(
+                pyosd_positions.get(args.position, pyosd.POS_BOT))
+            notification_obj.set_colour(args.color)
+        except Exception as e:
+            sys.stderr.write(
+                'Unable to create pyosd osd-object: {0}\n'.format(
+                    e))
+            sys.exit(1)
+    else:
+        if not pynotify:
+            sys.stderr.write(
+                'Could not load "pynotify".\n'
+                'Please install "pynotify" or use a different osd-system!\n'
+                'Terminating...\n')
+            sys.exit(1)
+        if not pynotify.init('BEINC Notify'):
+            sys.stderr.write('There was a problem with libnotify\n')
+            sys.exit(1)
+        try:
+            notification_obj = pynotify.Notification(' ')
+            notification_obj.set_timeout(1000 * args.osd_timeout)
+            notification_obj.set_property(
+                'app_name',
+                '{0} {1}'.format(sys.argv[0], __version__))
+        except Exception as e:
+            sys.stderr.write(
+                'Unable to create pynotify Notification-object: {0}\n'.format(
+                    e))
+            sys.exit(1)
     if not args.password:
         try:
             args.password = getpass.getpass()
         except Exception as e:
             sys.stderr.write('Prompt terminated\n')
             sys.exit(errno.EACCES)
-
-    if not pynotify.init('BEINC Notify'):
-        sys.stderr.write('There was a problem with libnotify\n')
-        sys.exit(1)
-
-    try:
-        notification_obj = pynotify.Notification(' ')
-        notification_obj.set_timeout(args.osd_timeout)
-        notification_obj.set_property(
-            'app_name',
-            '{0} {1}'.format(sys.argv[0], __version__))
-    except Exception as e:
-        sys.stderr.write(
-            'Unable to create pynotify Notification-object: {0}\n'.format(e))
-        sys.exit(1)
-
+    elif os.path.isfile(args.password):
+        try:
+            with open(args.password, 'r') as fp:
+                passwd = fp.readline()
+                if passwd.strip():
+                    args.password = passwd.strip()
+        except Exception as e:
+            sys.stderr.write('Unable to open password file: {0}'.format(e))
+            sys.exit(1)
     sc = sched.scheduler(time.time, time.sleep)
     sc.enter(args.frequency,
              1,
