@@ -1,0 +1,76 @@
+N.B. This file is not a legitimate .json file!!
+You should use beinc_config_sample.json as a base config file for your setup
+
+Since the JSON format doesn't offer support for comments, this file is only used
+to illustrate the BEINC config format and describe all available options.
+
+Unless specified otherwise, the values assigned to the given options are their
+default values. 
+
+Although the #-character is not a legal JSON comment, it is used in this
+documentation to better illustrate the comments.
+
+
+{
+    "server": {  # This whole section is used by the server only. 
+                 # It is only used by beinc_server.py and ignore by all other
+                 # components
+
+        "general": {  # Applies to the whole server (cherrypy) For more info:
+        # http://docs.cherrypy.org/en/latest/refman/_cpserver.html
+
+            # The name of a registered SSL adaptation module
+            "ssl_module": "pyopenssl",
+
+            # The filename of the private key to use with SSL.
+            "ssl_private_key": "/home/user/keys/key.pem",  # default: None
+
+            # The filename of the SSL certificate to use
+            "ssl_certificate": "/home/user/certs/cert.crt"  # default: None
+        },
+        "instances": [
+            {
+                "name": "test",
+                "password": "changeme",
+                "osd_system": "pynotify",
+                "osd_timeout": 5,
+                "pyosd_font": "",
+                "pyosd_vertical_offset": 120,
+                "pyosd_horizontal_offset": 30,
+                "pyosd_align": "left",
+                "pyosd_position": "bottom",
+                "pyosd_color": "blue",
+                "queue_size": 4
+            }
+        ]
+    },
+    "irc_client": {
+        "use_current_buffer": 0,
+        "targets": [
+            {
+                "name": "weechat_main",
+                "target_url": "https://10.0.0.2:9898/push/secondtest",
+                "target_password": "changeme",
+                "target_cert_file": "",
+                "target_timestamp_format": "%H:%M:%S",
+                "pm_title_template": "%s @ %S",
+                "pm_message_template": "%m",
+                "cm_title_template": "%c @ %S",
+                "cm_message_template": "%s -> %m",
+                "nm_title_template": "%c @ %S",
+                "nm_message_template": "%s -> %m",
+                "channel_list": ["RedpillLinpro.#python",
+                                 "Exile.#test",
+                                 "RedpillLinpro.#adult",
+                                 "Exile.#pichove"],
+                "nick_list": ["Exile.Blackmore"],
+                "channel_messages_policy": 2,
+                "private_messages_policy": 1,
+                "notifications_policy": 1,
+                "debug": 1,
+                "enabled": 1
+            }
+        ]
+    },
+    "config_version": 1
+}
