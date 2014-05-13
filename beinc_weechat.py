@@ -400,10 +400,7 @@ def beinc_command(data, buffer_obj, args):
     elif cmd_tokens[0] == 'target':
         return beinc_cmd_target_handler(cmd_tokens[1:])
     else:
-        beinc_prnt('data: {0}, cmd_tokens: {1}, args: {2}'.format(
-            str(data),
-            str(cmd_tokens),
-            str(args)))
+        beinc_prnt('syntax: /beinc < on | off | reload | target <action> >')
     return weechat.WEECHAT_RC_OK
 
 
