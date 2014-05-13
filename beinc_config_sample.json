@@ -31,6 +31,7 @@
                 "target_password": "changeme",
                 "target_cert_file": "",
                 "target_timestamp_format": "%H:%M:%S",
+                "socket_timeout": 30,
                 "pm_title_template": "%s @ %S",
                 "pm_message_template": "%m",
                 "cm_title_template": "%c @ %S",

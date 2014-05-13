@@ -117,6 +117,7 @@ class WeechatTarget(object):
                                                   '%H:%M:%S')
         self.__debug = bool(target_dict.get('debug', False))
         self.__enabled = bool(target_dict.get('enabled', True))
+        self.__socket_timeout = int(target_dict.get('socket_timeout', 30))
 
     @property
     def name(self):
@@ -300,9 +301,9 @@ class WeechatTarget(object):
                 global global_beinc_cert_file
                 global_beinc_cert_file = self.__cert_file
                 opener = urllib2.build_opener(ValidHTTPSHandler)
-                response = opener.open(req)
+                response = opener.open(req, timeout=self.__socket_timeout)
             else:
-                response = urllib2.urlopen(req)
+                response = urllib2.urlopen(req, self.__socket_timeout)
             res_code = response.code
             response.close()
             if res_code == 200:
