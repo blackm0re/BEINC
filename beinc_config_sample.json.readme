@@ -13,7 +13,7 @@ documentation to better illustrate the comments.
 
 {
     "server": {  # This whole section is used by the server only. 
-                 # It is only used by beinc_server.py and ignore by all other
+                 # It is only used by beinc_server.py and ignored by all other
                  # components
 
         "general": {  # Applies to the whole server (cherrypy) For more info:
@@ -28,49 +28,167 @@ documentation to better illustrate the comments.
             # The filename of the SSL certificate to use
             "ssl_certificate": "/home/user/certs/cert.crt"  # default: None
         },
+
+        # A list of instances. Check README for general information about them!
         "instances": [
             {
-                "name": "test",
-                "password": "changeme",
+                # A *unique* name that identifies the instance
+                "name": "beinc_name",
+
+                # The password that the client must provide in order to be able
+                # to push to / pull from the instance
+                "password": "beincpasswd",
+
+                # Possible values:
+                # "none" - the instance will serve for queueing
+                # "pynotify" - OSD implemented using pynotify (libnotify)
+                # "pyosd" - OSD implemented using pyosd (xosd)                
                 "osd_system": "pynotify",
+
+                # OSD timeout in seconds
+                # The amount of time the OSD message will remain in the screen
                 "osd_timeout": 5,
+
+                # Specify a custom font for the pyosd - backend
+                # "xfontsel" can be used to obtain a list of available fonts
                 "pyosd_font": "",
+
+                # Vertical offset (in pixels) for the pyosd - backend
                 "pyosd_vertical_offset": 120,
+
+                # Horizontal offset (in pixels) for the pyosd - backend
                 "pyosd_horizontal_offset": 30,
+
+                # Text horizontal alignment for the pyosd - backend
+                # Possible values:
+                # "left", "center", "right"
                 "pyosd_align": "left",
+
+                # Text vertical position for the pyosd - backend
+                # Possible values:
+                # "top", "middle", "bottom"                
                 "pyosd_position": "bottom",
+
+                # Font color for the pyosd - backend
+                # See "rgb.txt" in the X11 distribution of a list of colors
                 "pyosd_color": "blue",
+
+                # How many entries to be kept in the queue
+                # (when "osd_system": "none")
                 "queue_size": 4
             }
         ]
     },
-    "irc_client": {
-        "use_current_buffer": 0,
+    "irc_client": {  # This whole section is used by the weechat client only
+                     # It is used only by beinc_weechat.py and ignored by all
+                     # other components
+        "use_current_buffer": 0,  # Show weechat-message in the current buffer
+                                  # instead of the system-buffer
+        # A list of targets. Check README for general information about them!
         "targets": [
             {
+                # Unique name for the defined target
+                # Default: 4 characters random string
+                # Defining your own name will make life easier for you
                 "name": "weechat_main",
+                
+                # Target URL.
+                # Default: None (making the target useless)
                 "target_url": "https://10.0.0.2:9898/push/secondtest",
-                "target_password": "changeme",
+
+                # Password corresponding to the target BEINC instance
+                # Default: None
+                "target_password": "beincpasswd",
+
+                # The filename of the SSL certificate authority (CA) used to 
+                # sign the SSL certificate used by the BEINC server
+                # Default: "" (don't verify the certificate)
+                # It is *highly recommended* to use an SSL connection as well as
+                # to verify the server's certificate 
                 "target_cert_file": "",
+
+                # The timestamp-format used by the BEINC weechat client
+                # See 
+                # https://docs.python.org/2.7/library/datetime.html#strftime-strptime-behavior
+                # for more details
                 "target_timestamp_format": "%H:%M:%S",
+
+                # Supported macros:
+                # %c - channel name for chan. messages / your nick for prv. msgs
+                # %m - the message
+                # %n - your nick
+                # %p - program name (BEINC)
+                # %S - server name (as defined in Weechat)
+                # %s - source nick
+                # %t - timestamp as defined above
+                # ###
+
+                # Title (top OSD line) template for private messages
                 "pm_title_template": "%s @ %S",
+
+                # Message (bottom OSD line) template for private messages
                 "pm_message_template": "%m",
+
+                # Title (top OSD line) template for channel messages
                 "cm_title_template": "%c @ %S",
+
+                # Message (bottom OSD line) template for channel messages
                 "cm_message_template": "%s -> %m",
+
+                # Title (top OSD line) template for notification messages
                 "nm_title_template": "%c @ %S",
+
+                # Message (bottom OSD line) template for notification messages
                 "nm_message_template": "%s -> %m",
+
+                # Channel list
+                # Default: [] (empty)
                 "channel_list": ["RedpillLinpro.#python",
                                  "Exile.#test",
                                  "RedpillLinpro.#adult",
                                  "Exile.#pichove"],
+
+                # Nick list
+                # Default: [] (empty)
                 "nick_list": ["Exile.Blackmore"],
+
+                # Supported policy values:
+                #
+                # 0 - don't display any messages of the given category
+                # 1 - display all messages of the given category
+                # 2 - display only messages from channels/nicks that are 
+                #     present in the channel_list / nick_list
+
+                # Policy for channel messages
                 "channel_messages_policy": 2,
+
+                # Policy for private messages
                 "private_messages_policy": 1,
+
+                # Policy for notification messages
                 "notifications_policy": 1,
-                "debug": 1,
-                "enabled": 1
+
+                # Produce debug messages for this target
+                "debug": 0,
+
+                # Enable this target by default
+                "enabled": 1,
+
+                # Timeout for this target's socket in seconds
+                # If the target host is not available 
+                # (not returning ICMP packets), Weechat will block during the 
+                # timeout, creating inconvenience.
+                # 2 seconds is a recommended value if you have a decent line
+                # between the beinc_weechat and beinc_server.
+                "socket_timeout": 3
             }
         ]
     },
+    # The version of this config file
+    # Default: 1 (you should really never leave it undefined)
+    # Used by beinc_server and beinc_weechat to check whether
+    # the config (.json) file is outdated.
+    # Every future version of BEINC will be shipped with
+    # beinc_config_sample.json and beinc_config_sample.json.readme 
     "config_version": 1
 }

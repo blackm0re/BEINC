@@ -44,6 +44,7 @@ global_values = dict()
 BEINC_POLICY_NONE = 0
 BEINC_POLICY_ALL = 1
 BEINC_POLICY_LIST_ONLY = 2
+BEINC_CURRENT_CONFIG_VERSION = 1
 
 
 class ValidHTTPSConnection(httplib.HTTPConnection):
@@ -117,7 +118,7 @@ class WeechatTarget(object):
                                                   '%H:%M:%S')
         self.__debug = bool(target_dict.get('debug', False))
         self.__enabled = bool(target_dict.get('enabled', True))
-        self.__socket_timeout = int(target_dict.get('socket_timeout', 30))
+        self.__socket_timeout = int(target_dict.get('socket_timeout', 3))
 
     @property
     def name(self):
@@ -396,7 +397,7 @@ def beinc_command(data, buffer_obj, args):
     elif args == 'reload':
         beinc_prnt('Reloading BEINC...')
         beinc_init()
-    elif cmd_tokens[0] == 'broadcast':
+    elif cmd_tokens[0] in ('broadcast', 'test'):
         return beinc_cmd_broadcast_handler(cmd_tokens[1:])
     elif cmd_tokens[0] == 'target':
         return beinc_cmd_target_handler(cmd_tokens[1:])
@@ -515,6 +516,15 @@ def beinc_init():
         global_values['use_current_buffer'] = bool(
             config_dict['irc_client'].get(
                 'use_current_buffer', False))
+        if config_dict.get('config_version',
+                           0) != BEINC_CURRENT_CONFIG_VERSION:
+            beinc_prnt('WARNING: The version of the config-file: {0} ({1}) '
+                       'does not correspond to the latest version supported '
+                       'by this program ({2})\nCheck beinc_config_sample.json '
+                       'for the newest features!'.format(
+                           beinc_config_file_str,
+                           config_dict.get('config_version', 0),
+                           BEINC_CURRENT_CONFIG_VERSION))
         for target in config_dict['irc_client']['targets']:
             try:
                 new_target = WeechatTarget(target)

@@ -47,7 +47,8 @@
                 "private_messages_policy": 1,
                 "notifications_policy": 1,
                 "debug": 1,
-                "enabled": 1
+                "enabled": 1,
+                "socket_timeout": 3
             }
         ]
     },
