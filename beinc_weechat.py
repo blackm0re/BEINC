@@ -488,6 +488,11 @@ def beinc_privmsg_handler(data, signal, signal_data):
 
 
 def beinc_init():
+    """
+    Ran every time the script is (re)loaded
+    It loads the config (.json) file and (re)loads its contents into memory
+    beinc_init() will disable all notifications on failure
+    """
 
     global enabled
     global target_list
@@ -543,8 +548,9 @@ def beinc_init():
             beinc_prnt('BEINC target "{0}" added'.format(new_target.name))
         beinc_prnt('Done!')
     except Exception as e:
-        beinc_prnt('ERROR: unable to parse {0}: {1} - {2}'.format(
-            beinc_config_file_str, custom_error, e))
+        beinc_prnt('ERROR: unable to parse {0}: {1} - {2}\n'
+                   'BEINC is now disabled'.format(
+                       beinc_config_file_str, custom_error, e))
         enabled = False
         # do not return error / exit the script
         # in order to give a smoother opportunity to fix a 'broken' config

@@ -1,11 +1,34 @@
 Copyright (C) 2014 - Simeon Simeonov
 See the end of the file for license conditions.
 
-The file INSTALL in this directory describes how to setup and use BEINC
+The file INSTALL in this very same directory describes how to setup & use BEINC
 
 
-Introduction
-------------
+What is BEINC?
+--------------
+
+Blackmore's Enchanced IRC Notification Collection (BEINC) is a free set of
+components that aim to provide a complete system for different on-screen-display
+notification scenarios.
+
+The current version of BEINC contains the following components:
+beinc_server.py - server used for queueing or providing on-screen-display (OSD)
+beinc_poller.py - client used to fetch enqueued messages from beinc_server.py
+                  and provide OSD
+beinc_weechat.py - a complete script / client for the Weechat IRC client >=0.4.0
+                   used to push notification messages to beinc_server.py
+beinc_generic_client.py - a simple client used to push notification messages
+                          to beinc_server.py
+                          Its main purpose is to provide a convenient way to 
+                          test beinc_server.py (and beinc_poller.py) as well as
+                          to serve as an example on how to develop BEINC-clients
+
+
+Why should I use BEINC and what has it done for me lately?
+----------------------------------------------------------
+
+
+
 
 
 Supported systems & requirements
@@ -13,13 +36,17 @@ Supported systems & requirements
 Any system running Postfix and Spamassassin.
 
 
-Requirements: Python 2.7.*
+Requirements:
+All components: Python 2.7.*
+beinc_server.py: cherrypy >= 3.2.0, pyopenssl >= 0.13.0
+beinc_weechat.py:
+beinc_poller.py: 
 
 
 License
 -------
 
-This file is part of Blackmore's SpamAssassinWrapper.
+This file is part of BEINC.
 
 BEINC is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
