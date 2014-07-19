@@ -27,7 +27,30 @@ beinc_generic_client.py - a simple client used to push notification messages
 Why should I use BEINC and what has it done for me lately?
 ----------------------------------------------------------
 
+BEINC is designed to assist you two common scenarios. 
+As an example we will consider the case of an IRC cliet, although BEINC can be
+used by any client that conforms with BEINC's "messaging protocol".
 
+We have the common situation where a user is accessing an IRC client located on
+a different computer (typically: weechat, irssi, etc. running on a remote server)
+The IRC client receives a private message (or any event that requires the user's
+attention) and the user has to be notified.
+
+Scenario one: 
+The user's computer can be reached from the server running the IRC client.
+If the server (running the IRC client) is able to connect to 
+a specified TCP port on the user's computer, this is sufficient for BEINC to
+directly notify the user. Solution:
+ - set up the beinc_server.py on the desktop workstation (the computer where the
+   notification-message should be displayed). Define an unprivileged port for 
+   beinc_server.py to listen on and enable its OSD capabilities 
+   (through pynotify and/or pyosd)
+ - set up a BEINC client similar to beinc_generic_client.py on the server
+   If you are running weechat >=0.4.0, this version of BEINC comes with 
+   a complete weechat BEINC-client: beinc_weechat.py
+   Configure the client to send notifications to the beinc_server.py
+
+Scenario two:
 
 
 
