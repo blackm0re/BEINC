@@ -1,13 +1,12 @@
 Installation Instructions
 -------------------------
 
-Refer to README for a basic information about the differents BEINC components
+Refer to README for a basic information about the different BEINC components
 and their software requirements!
 
 
 Installing the dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 
 Gentoo GNU/Linux 2013, 2014
@@ -72,7 +71,7 @@ Create a configuration file based on beinc_config_sample.json, defining your ins
 Start the BEINC server:
 $ ./beinc_server.py -H 10.0.0.44 -p 9678
 The example loads the server listening on 10.0.0.44, port 9678 using the default
-~/.beinc_server.json as a configuration file  
+~/.beinc_server.json as a configuration file and usually gives you the cherrypy console
 
 beinc_poller.py:
 $ ./beinc_poller.py -h

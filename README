@@ -1,8 +1,6 @@
 Copyright (C) 2014 - Simeon Simeonov
 See the end of the file for license conditions.
 
-The file INSTALL in this very same directory describes how to setup & use BEINC
-
 
 What is BEINC?
 --------------
@@ -22,6 +20,7 @@ beinc_generic_client.py - a simple client used to push notification messages
                           Its main purpose is to provide a convenient way to 
                           test beinc_server.py (and beinc_poller.py) as well as
                           to serve as an example on how to develop BEINC-clients
++ documentation and a sample configuration file (beinc_config_sample.json)
 
 
 Why should I use BEINC and what has it done for me lately?
@@ -69,10 +68,21 @@ Solution:
    beinc_poller.py should be able to access the server running beinc_server.py
    Polling interval of 5 seconds should be enough for most users.
 
-Read beinc_config_sample.json.readme for details on how to setup beinc_server.py 
-and beinc_weechat.py!
-Use "-h" command line parameter in order to display the available options for 
+Read beinc_config_sample.json.readme for details on how to setup 
+beinc_server.py and beinc_weechat.py!
+Use "-h" command line parameter to display the available options for
 beinc_poller.py and beinc_generic_client.py
+Each configured beinc_server.py instance has an unique name.
+There are 2 operations that can be done on an instance:
+ - push - a client is sending a notification to the BEINC server.
+          A push is available for all instances.
+ - pull - a poller (f.i. beinc_poller.py) is fetching data from the instance-queue.
+          A pull is available only for instances defined for queueing. 
+          (read beinc_config_sample.json.readme for details!)
+Example: 
+If you defined a beinc_server.py instance with SSL-support called "beinc_test",
+your URL for pushing will be: https://hostname:port/push/beinc_test
+and for polling: https://hostname:port/pull/beinc_test
 
 
 Supported systems & requirements
@@ -91,7 +101,7 @@ beinc_weechat.py: Weechat >= 0.4.0
 beinc_poller.py: pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
 beinc_generic_client.py: No additional software required
 
-Read INSTALL for more details about installing the requirements!
+Read INSTALL in this very same folder for more details about installing the requirements!
 
 
 License
