@@ -86,6 +86,11 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
 
 def poll_notifications(scheduler, args, notification_obj):
     """
+    the core function initiated by the scheduler performing a single poll
+
+    scheduler: scheduler object
+    args: the argparse processed command-line arguments
+    notification_obj: pynotify or pyosd notification object
     """
     try:
         post_values = {'password': args.password}
@@ -193,11 +198,12 @@ def main():
         help='BEINC osd-system ("pynotify" or "pyosd") (default: pynotify)')
     parser.add_argument(
         '-P', '--password',
-        metavar='PASSWORD',
+        metavar='PASSWORD[FILE]',
         type=str,
         dest='password',
         default='',
-        help='BEINC taget-password (default & recommended: prompt for passwd)')
+        help='BEINC taget-password / text-file containing the target password'
+        ' (default & recommended: prompt for passwd)')
     parser.add_argument(
         '-p', '--position',
         metavar='POSITION',

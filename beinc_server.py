@@ -133,14 +133,14 @@ class BEINCInstance(object):
     @property
     def name(self):
         """
-        name-property for the server instance
+        name-property for the server instance (read-only)
         """
         return self.__name
 
     @property
     def queueable(self):
         """
-        True if this instance has a queueing capability
+        True if this instance has a queueing capability (read-only)
         """
         return bool(self.__queue_size)
 
@@ -216,6 +216,9 @@ def beinc_instance_login(method):
 
 
 class WebNotifyServer(object):
+    """
+    A class representing the entire server
+    """
 
     def __init__(self, config):
         """
@@ -244,6 +247,9 @@ class WebNotifyServer(object):
 
     @property
     def instances(self):
+        """
+        a property that returns the instance list (read-only)
+        """
         return self.__instances
 
     @cherrypy.expose

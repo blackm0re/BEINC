@@ -27,6 +27,9 @@ beinc_generic_client.py - a simple client used to push notification messages
 Why should I use BEINC and what has it done for me lately?
 ----------------------------------------------------------
 
+BEINC is a free-software, licensed under the GPL3. It gives you the freedoms
+of using it, studying it and modifying it.
+
 BEINC is designed to assist you two common scenarios. 
 As an example we will consider the case of an IRC cliet, although BEINC can be
 used by any client that conforms with BEINC's "messaging protocol".
@@ -35,9 +38,15 @@ We have the common situation where a user is accessing an IRC client located on
 a different computer (typically: weechat, irssi, etc. running on a remote server)
 The IRC client receives a private message (or any event that requires the user's
 attention) and the user has to be notified.
+No matter which of the two scenarios applies to your needs, you should start by
+ - setting up a BEINC client similar to beinc_generic_client.py on the server
+   If you are running weechat >=0.4.0, this version of BEINC comes with 
+   a complete weechat BEINC-client: beinc_weechat.py
+   Configure the client to send notifications to the beinc_server.py
+N.B. Using encryption is important in these days and age.
 
 Scenario one: 
-The user's computer can be reached from the server running the IRC client.
+The user's computer can be reached by the server running the IRC client.
 If the server (running the IRC client) is able to connect to 
 a specified TCP port on the user's computer, this is sufficient for BEINC to
 directly notify the user. Solution:
@@ -45,25 +54,44 @@ directly notify the user. Solution:
    notification-message should be displayed). Define an unprivileged port for 
    beinc_server.py to listen on and enable its OSD capabilities 
    (through pynotify and/or pyosd)
- - set up a BEINC client similar to beinc_generic_client.py on the server
-   If you are running weechat >=0.4.0, this version of BEINC comes with 
-   a complete weechat BEINC-client: beinc_weechat.py
-   Configure the client to send notifications to the beinc_server.py
 
 Scenario two:
+The user's computer can NOT be reached by the server running the IRC client.
+This scenario is typical for users that are working on computers that can not
+be reached from outside.
+Solution:
+ - find a server that can be reached by the server running the IRC client.
+ - set up the beinc_server.py on it. No OSD capabilities are needed (no X11).
+   Define instance(s) for queueing. Define a queue size 
+   (how many notifications to store) for each of them.
+ - set up beinc_poller.py on the desktop workstation (the computer where the
+   notification-message should be displayed).
+   beinc_poller.py should be able to access the server running beinc_server.py
+   Polling interval of 5 seconds should be enough for most users.
 
+Read beinc_config_sample.json.readme for details on how to setup beinc_server.py 
+and beinc_weechat.py!
+Use "-h" command line parameter in order to display the available options for 
+beinc_poller.py and beinc_generic_client.py
 
 
 Supported systems & requirements
 --------------------------------
-Any system running Postfix and Spamassassin.
+Any system running the software required for the selected components.
+All components tested on: Gentoo GNU/Linux 2013,2014,
+                          Ubuntu GNU/Linux 14.4,13.10,
+                          FreeBSD 9.x
 
 
 Requirements:
 All components: Python 2.7.*
-beinc_server.py: cherrypy >= 3.2.0, pyopenssl >= 0.13.0
-beinc_weechat.py:
-beinc_poller.py: 
+beinc_server.py: cherrypy >= 3.2.0, pyopenssl >= 0.13.0 (opntional (ssl support)),
+                 pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
+beinc_weechat.py: Weechat >= 0.4.0
+beinc_poller.py: pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
+beinc_generic_client.py: No additional software required
+
+Read INSTALL for more details about installing the requirements!
 
 
 License

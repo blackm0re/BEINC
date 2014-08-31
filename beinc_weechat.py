@@ -79,6 +79,8 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
 
 class WeechatTarget(object):
     """
+    The target (destination) class
+    Each remote destination is represented as a WeechatTarget object
     """
 
     def __init__(self, target_dict):
@@ -123,48 +125,56 @@ class WeechatTarget(object):
     @property
     def name(self):
         """
+        Target name (read-only property)
         """
         return self.__name
 
     @property
     def chans(self):
         """
+        Target channel list (read-only property)
         """
         return self.__chans
 
     @property
     def nicks(self):
         """
+        Target nick list (read-only property)
         """
         return self.__nicks
 
     @property
     def channel_messages_policy(self):
         """
+        The target's channel messages policy (read-only property)
         """
         return self.__chan_messages_policy
 
     @property
     def private_messages_policy(self):
         """
+        The target's private messages policy (read-only property)
         """
         return self.__priv_messages_policy
 
     @property
     def notifications_policy(self):
         """
+        The target's notifications policy (read-only property)
         """
         return self.__notifications_policy
 
     @property
     def enabled(self):
         """
+        The target's enabled status (bool property)
         """
         return self.__enabled
 
     @enabled.setter
     def enabled(self, value):
         """
+        The target's enabled status (bool property)
         """
         self.__enabled = value
 
@@ -186,6 +196,9 @@ class WeechatTarget(object):
 
     def send_private_message_notification(self, values):
         """
+        sends a private message notification to the represented target
+
+        values: dict pupulated by the irc msg-handler
         """
         try:
             title_str = self.__fetch_formatted_str(self.__pm_title_template,
@@ -210,6 +223,9 @@ class WeechatTarget(object):
 
     def send_channel_message_notification(self, values):
         """
+        sends a channel message notification to the represented target
+
+        values: dict pupulated by the irc msg-handler
         """
         try:
             title_str = self.__fetch_formatted_str(self.__cm_title_template,
@@ -234,6 +250,9 @@ class WeechatTarget(object):
 
     def send_notify_message_notification(self, values):
         """
+        sends a notify message notification to the represented target
+
+        values: dict pupulated by the irc msg-handler
         """
         try:
             title_str = self.__fetch_formatted_str(self.__nm_title_template,
@@ -258,6 +277,10 @@ class WeechatTarget(object):
 
     def send_broadcast_notification(self, message):
         """
+        sends a 'pure' broadcast / test message notification
+        to the represented target
+
+        message: a single message string
         """
         try:
             post_values = {'title': 'BEINC broadcast',
@@ -277,6 +300,11 @@ class WeechatTarget(object):
 
     def __fetch_formatted_str(self, template, values):
         """
+        returns a formatted string by replacing the defined
+        macros in 'template' the the corresponding values from 'values'
+
+        values: dict
+        template: str
         """
         template = unicode(template)
         timestamp = datetime.datetime.now().strftime(self.__timestamp_format)
@@ -384,6 +412,9 @@ def beinc_cmd_target_handler(cmd_tokens):
 
 
 def beinc_command(data, buffer_obj, args):
+    """
+    Callback function handling the Weechat's /beinc command
+    """
     global enabled
     cmd_tokens = args.split()
     if not cmd_tokens:
@@ -402,11 +433,15 @@ def beinc_command(data, buffer_obj, args):
     elif cmd_tokens[0] == 'target':
         return beinc_cmd_target_handler(cmd_tokens[1:])
     else:
-        beinc_prnt('syntax: /beinc < on | off | reload | target <action> >')
+        beinc_prnt('syntax: /beinc < on | off | reload |'
+                   ' broadcast <text> | target <action> >')
     return weechat.WEECHAT_RC_OK
 
 
 def beinc_privmsg_handler(data, signal, signal_data):
+    """
+    Callback function the *PRIVMSG* IRC messages hooked by Weechat
+    """
     if not enabled:
         return weechat.WEECHAT_RC_OK
     prvmsg_dict = weechat.info_get_hashtable('irc_message_parse',
