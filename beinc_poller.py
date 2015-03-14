@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v1.0
-# Copyright (C) 2013-2014 Simeon Simeonov
+# Copyright (C) 2013-2015 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -84,13 +84,61 @@ class ValidHTTPSHandler(urllib2.HTTPSHandler):
         return self.do_open(ValidHTTPSConnection, req)
 
 
-def poll_notifications(scheduler, args, notification_obj):
+def display_notification(args, title, message):
+    """
+    A wrapper function for displaying a single notification
+
+    args: the argparse processed command-line arguments
+    title: notification title
+    message: notification message
+    """
+    if args.osd_sys == 'pyosd':
+        if not pyosd:
+            raise Exception(
+                'Could not load "pyosd".\n'
+                'Please install "pyosd" or use a different osd-system!\n'
+                'Terminating...\n')
+        notification_obj = pyosd.osd()
+        notification_obj.set_timeout(args.osd_timeout)
+        if args.font:
+            notification_obj.set_font(args.font)
+        notification_obj.set_vertical_offset(args.voffset)
+        notification_obj.set_horizontal_offset(args.hoffset)
+        notification_obj.set_align(
+            pyosd_alignments.get(args.alignment, pyosd.ALIGN_LEFT))
+        notification_obj.set_pos(
+            pyosd_positions.get(args.position, pyosd.POS_BOT))
+        notification_obj.set_colour(args.color)
+        notification_obj.display(title, line=0)
+        notification_obj.display(message, line=1)
+    elif args.osd_sys == 'pynotify':
+        if not pynotify:
+            raise Exception(
+                'Could not load "pynotify".\n'
+                'Please install "pynotify" or use a different osd-system!\n'
+                'Terminating...\n')
+        if not pynotify.init('BEINC Notify'):
+            raise Exception('There was a problem with libnotify\n')
+        notification_obj = pynotify.Notification(' ')
+        notification_obj.set_timeout(1000 * args.osd_timeout)
+        notification_obj.set_property(
+            'app_name',
+            '{0} {1}'.format(sys.argv[0], __version__))
+        notification_obj.set_properties(
+            summary=title,
+            body=message)
+        notification_obj.show()
+    else:
+        raise Exception(
+            'Unsupported osd-system: {0}\n'.format(args.osd_sys))
+
+
+def poll_notifications(scheduler, args):
     """
     the core function initiated by the scheduler performing a single poll
 
     scheduler: scheduler object
     args: the argparse processed command-line arguments
-    notification_obj: pynotify or pyosd notification object
     """
     try:
         post_values = {'password': args.password}
@@ -113,23 +161,16 @@ def poll_notifications(scheduler, args, notification_obj):
         for entry in res_list:
             title = entry.get('title', '')
             message = entry.get('message', '')
-            if args.osd_sys == 'pyosd':
-                notification_obj.display(title, line=0)
-                notification_obj.display(message, line=1)
-            else:
-                notification_obj.set_properties(
-                    summary=title,
-                    body=message)
-                notification_obj.show()
+            display_notification(args, title, message)
         scheduler.enter(args.frequency,
                         1,
                         poll_notifications,
-                        (scheduler, args, notification_obj))
+                        (scheduler, args))
     except urllib2.HTTPError as e:
         sys.stderr.write('BEINC-server error ({0} - {1})\n'.format(e.code,
                                                                    e.reason))
     except Exception as e:
-        sys.stderr.write('BEINC-poller error: {0}\n'.format(e))
+        sys.stderr.write('BEINC-poller error: {0}\nTerminating...'.format(e))
         sys.exit(errno.EPERM)
 
 
@@ -231,51 +272,6 @@ def main():
         default=120,
         help='Vertical offset for "pyosd" (default: 120)')
     args = parser.parse_args()
-    if args.osd_sys == 'pyosd':
-        if not pyosd:
-            sys.stderr.write(
-                'Could not load "pyosd".\n'
-                'Please install "pyosd" or use a different osd-system!\n'
-                'Terminating...\n')
-            sys.exit(1)
-        try:
-            notification_obj = pyosd.osd()
-            notification_obj.set_timeout(args.osd_timeout)
-            if args.font:
-                notification_obj.set_font(args.font)
-            notification_obj.set_vertical_offset(args.voffset)
-            notification_obj.set_horizontal_offset(args.hoffset)
-            notification_obj.set_align(
-                pyosd_alignments.get(args.alignment, pyosd.ALIGN_LEFT))
-            notification_obj.set_pos(
-                pyosd_positions.get(args.position, pyosd.POS_BOT))
-            notification_obj.set_colour(args.color)
-        except Exception as e:
-            sys.stderr.write(
-                'Unable to create pyosd osd-object: {0}\n'.format(
-                    e))
-            sys.exit(1)
-    else:
-        if not pynotify:
-            sys.stderr.write(
-                'Could not load "pynotify".\n'
-                'Please install "pynotify" or use a different osd-system!\n'
-                'Terminating...\n')
-            sys.exit(1)
-        if not pynotify.init('BEINC Notify'):
-            sys.stderr.write('There was a problem with libnotify\n')
-            sys.exit(1)
-        try:
-            notification_obj = pynotify.Notification(' ')
-            notification_obj.set_timeout(1000 * args.osd_timeout)
-            notification_obj.set_property(
-                'app_name',
-                '{0} {1}'.format(sys.argv[0], __version__))
-        except Exception as e:
-            sys.stderr.write(
-                'Unable to create pynotify Notification-object: {0}\n'.format(
-                    e))
-            sys.exit(1)
     if not args.password:
         try:
             args.password = getpass.getpass()
@@ -291,12 +287,12 @@ def main():
         except Exception as e:
             sys.stderr.write('Unable to open password file: {0}'.format(e))
             sys.exit(1)
-    sc = sched.scheduler(time.time, time.sleep)
-    sc.enter(args.frequency,
-             1,
-             poll_notifications,
-             (sc, args, notification_obj))
-    sc.run()
+    scheduler = sched.scheduler(time.time, time.sleep)
+    scheduler.enter(args.frequency,
+                    1,
+                    poll_notifications,
+                    (scheduler, args))
+    scheduler.run()
 
 
 if __name__ == '__main__':
