@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v1.1
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
 # Copyright (C) 2013-2015 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,11 @@ import json
 import os
 import sys
 
-import cherrypy
+import OpenSSL
+
+from twisted.web import xmlrpc, server
+from twisted.internet import protocol, reactor, ssl
+from twisted.python.filepath import FilePath
 
 try:
     import pynotify
@@ -52,7 +56,6 @@ __license__ = 'GPL3'
 BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 BEINC_OSD_TYPE_PYOSD = 2
-
 
 class BEINCInstance(object):
     """
@@ -193,28 +196,25 @@ class BEINCInstance(object):
         self.__message_queue.append({'title': title, 'message': message})
 
 
-def beinc_instance_login(method):
+def beinc_login_required(method):
     """
     decorator for checking login credentials
     """
 
-    def wrapper(self, *args, **kwargs):
-        if not args:
-            raise cherrypy.HTTPError(status=404)
+    def wrapper(self, resource_name, password, *args, **kwargs):
         try:
-            instance = self.instances[args[0]]
+            instance = self.instances[resource_name]
         except Exception as e:
-            raise cherrypy.HTTPError(status=401,
-                                     message='Wrong instance or password')
-        if not instance.password_match(kwargs.get('password')):
-            raise cherrypy.HTTPError(status=401,
-                                     message='Wrong instance or password')
-        return method(self, *args, **kwargs)
-
+            raise xmlrpc.Fault(401,
+                               'Wrong instance or password')
+        if not instance.password_match(password):
+            raise xmlrpc.Fault(401,
+                               'Wrong instance or password')
+        return method(self, resource_name, password, *args, **kwargs)
     return wrapper
 
 
-class WebNotifyServer(object):
+class XMLRPCNotifyServer(xmlrpc.XMLRPC):
     """
     A class representing the entire server
     """
@@ -222,6 +222,7 @@ class WebNotifyServer(object):
     def __init__(self, config):
         """
         """
+        xmlrpc.XMLRPC.__init__(self)
         self.__config = config
         self.__instances = dict()
         # initialize pynotify if the module exists and if needed
@@ -251,27 +252,12 @@ class WebNotifyServer(object):
         """
         return self.__instances
 
-    @cherrypy.expose
-    def index(self):
+    @beinc_login_required
+    def xmlrpc_push(self, resource_name, password, title, message):
         """
-        default dispatcher
+        Return all passed args.
         """
-        return 'index'
-
-    @cherrypy.expose
-    def default(self, *args):
-        """
-        default dispatcher
-        """
-        return 'default'
-
-    @cherrypy.expose
-    @beinc_instance_login
-    def push(self, *args, **kwargs):
-        instance = self.__instances[args[0]]
-        ##print('**kwargs: {0}'.format(str(kwargs)))
-        title = kwargs.get('title', '')
-        message = kwargs.get('message', '')
+        instance = self.__instances[resource_name]
         try:
             instance.send_message(title, message)
             return 'OK'
@@ -280,22 +266,24 @@ class WebNotifyServer(object):
                 'Unable to handle message in {0}: ({1})\n'.format(
                     instance.name,
                     e))
-            raise cherrypy.HTTPError(500, 'Unable to send message')
+            raise xmlrpc.Fault(500, 'Unable to send message')
 
-    @cherrypy.expose
-    @beinc_instance_login
-    def pull(self, *args, **kwargs):
+    def xmlrpc_pull(self, resource_name, password):
+        """
+        Return sum of arguments.
+        """
         instance = self.__instances[args[0]]
         if not instance.queueable:
-            raise cherrypy.HTTPError(
-                status=405,
-                message='BEINC instance "{0}" does not support queuing'.format(
+            raise xmlrpc.Fault(
+                405,
+                'BEINC instance "{0}" does not support queuing'.format(
                     instance.name))
         return instance.get_queue()
 
 
 def main():
-
+    """
+    """
     parser = argparse.ArgumentParser(
         description='The following options are available')
     parser.add_argument(
@@ -338,22 +326,25 @@ def main():
         sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
                                                            e))
         sys.exit(errno.EIO)
-    ssl_module = config_dict['server']['general']['ssl_module'].encode('utf-8')
     ssl_certificate = config_dict['server']['general']['ssl_certificate']
     ssl_private_key = config_dict['server']['general']['ssl_private_key']
-    cherrypy.config.update({
-        'server.socket_host': args.hostname,
-        'server.socket_port': args.port,
-        'server.ssl_module': ssl_module,
-        'server.ssl_certificate': ssl_certificate,
-        'server.ssl_private_key': ssl_private_key,
-        'tools.encode.on': True,
-        'tools.encode.encoding': 'utf-8',
-        'tools.log_tracebacks.on': False,
-        'request.show_tracebacks': False
-    })
-    try:
-        cherrypy.quickstart(WebNotifyServer(config_dict))
+    try:        
+        beinc_server = XMLRPCNotifyServer(config_dict)
+        cert_path = FilePath(
+            config_dict['server']['general']['ssl_certificate'])
+        key_path = FilePath(
+            config_dict['server']['general']['ssl_private_key'])
+        private_certificate = ssl.PrivateCertificate.loadPEM(
+            key_path.getContent() + cert_path.getContent())
+        options = private_certificate.options()
+        options.method = OpenSSL.SSL.TLSv1_2_METHOD
+        # options.acceptableCiphers =
+        # ssl.AcceptableCiphers.fromOpenSSLCipherString('EXP-RC4-MD5')
+        reactor.listenSSL(args.port,
+                          server.Site(beinc_server),
+                          options,
+                          interface=args.hostname)
+        reactor.run()
     except Exception as e:
         sys.stderr.write("WebServer error: {0}".format(e))
         sys.exit(1)
