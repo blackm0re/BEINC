@@ -31,7 +31,7 @@ from functools import wraps
 
 from twisted.web import xmlrpc, server
 from twisted.internet import protocol, reactor, ssl
-from twisted.python.filepath import FilePath
+from twisted.python import filepath, log
 
 try:
     import pynotify
@@ -188,9 +188,9 @@ class BEINCInstance(object):
         """
         Reruens a json representation of the message queue
         """
-        jstr = json.dumps(self.__message_queue)
+        r_value = self.__message_queue
         self.__message_queue = list()
-        return jstr
+        return r_value
 
     def __send_pynotify_messaage(self, title, message):
         """
@@ -339,13 +339,14 @@ def main():
         action='version',
         version='%(prog)s {0}'.format(__version__),
         help='Display program-version and exit')
+    log.startLogging(sys.stdout)
     args = parser.parse_args()
     try:
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
     except Exception as e:
         sys.stderr.write('Unable to parse {0}: {1}\n'.format(args.config_file,
-                                                           e))
+                                                             e))
         sys.exit(errno.EIO)
     try:
         if config_dict.get('config_version') != 2:
@@ -364,8 +365,8 @@ def main():
         beinc_server = XMLRPCNotifyServer(config_dict)
         if ssl_certificate and ssl_private_key:
             # SSL connection
-            cert_path = FilePath(ssl_certificate)
-            key_path = FilePath(ssl_private_key)
+            cert_path = filepath.FilePath(ssl_certificate)
+            key_path = filepath.FilePath(ssl_private_key)
             private_certificate = ssl.PrivateCertificate.loadPEM(
                 key_path.getContent() + cert_path.getContent())
             options = private_certificate.options()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v1.0
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
 # Copyright (C) 2013-2015 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
@@ -21,12 +21,12 @@
 import argparse
 import errno
 import getpass
-import httplib
-import socket
+import httplib  # for Python < 2.7.9
+import os
+import socket  # for Python < 2.7.9
 import ssl
 import sys
-import urllib
-import urllib2
+import xmlrpclib
 
 
 __author__ = 'Simeon Simeonov'
@@ -34,62 +34,91 @@ __version__ = '1.0'
 __license__ = 'GPL3'
 
 
-class ValidHTTPSConnection(httplib.HTTPConnection):
+class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
     """
-    Implements a simple CERT verification functionality
-    """
+    This class allows communication via SSL.
 
+    It is a reimplementation of httplib.HTTPSConnection and
+    allows the server certificate to be validated against CA
+    This functionality lacks in Python < 2.7.9
+    """
     default_port = httplib.HTTPS_PORT
 
-    def __init__(self, *args, **kwargs):
-        httplib.HTTPConnection.__init__(self, *args, **kwargs)
+    def __init__(self, host, port=None, key_file=None, cert_file=None,
+                 strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+                 source_address=None, ca_cert=None):
+        httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
+                                        source_address)
+        self.key_file = key_file
+        self.cert_file = cert_file
+        self.ca_cert = ca_cert
 
     def connect(self):
+        "Connect to a host on a given (SSL) port."
         sock = socket.create_connection((self.host, self.port),
                                         self.timeout, self.source_address)
         if self._tunnel_host:
             self.sock = sock
             self._tunnel()
         self.sock = ssl.wrap_socket(sock,
-                                    ca_certs=global_beinc_cert_file,
-                                    cert_reqs=ssl.CERT_REQUIRED)
+                                    self.key_file,
+                                    self.cert_file,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    ca_certs=self.ca_cert)
+
+class BEINCCustomSafeTransport(xmlrpclib.Transport):
+
+    def __init__(self, use_datetime=0, ca_cert=None):
+        xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
+        self.ca_cert = ca_cert
+                            
+    def make_connection(self, host):
+        if self._connection and host == self._connection[0]:
+            return self._connection[1]
+        try:
+            HTTPS = BEINCCustomHTTPSConnection
+        except AttributeError:
+            raise NotImplementedError(
+                "your version of httplib doesn't support HTTPS"
+            )
+        else:
+            chost, self._extra_headers, x509 = self.get_host_info(host)
+            self._connection = host, HTTPS(chost,
+                                           None,
+                                           ca_cert=self.ca_cert,
+                                           **(x509 or {}))
+            return self._connection[1]
 
 
-class ValidHTTPSHandler(urllib2.HTTPSHandler):
-    """
-    Implements a simple CERT verification functionality
-    """
-
-    def https_open(self, req):
-        return self.do_open(ValidHTTPSConnection, req)
-
-
-def action_push(args):
+def action_execute(args):
     """
     """
     try:
-        post_values = {'title': args.title,
-                       'message': args.message,
-                       'password': args.password}
-        data = urllib.urlencode(post_values)
-        req = urllib2.Request(args.url, data)
-        if args.cert:  # check for cert validity
-            global global_beinc_cert_file  # ugly hack
-            global_beinc_cert_file = args.cert
-            opener = urllib2.build_opener(ValidHTTPSHandler)
-            response = opener.open(req)
-        else:  # ... or don't
-            response = urllib2.urlopen(req)
-        res_code = response.code
-        if res_code == 200:
-            print('Server responded: OK')
+        if sys.hexversion >= 0x20709f0:
+            # Python >= 2.7.9
+            context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.check_hostname = False
+            context.load_verify_locations(os.path.expanduser(args.cert))
+            transport = xmlrpclib.SafeTransport(context=context)
         else:
-            print('Server responded: {0}'.format(res_code))
-        print('Body:\n{0}'.format(response.read()))
-        response.close()
-    except urllib2.HTTPError as e:
-        sys.stderr.write('BEINC-server error ({0} - {1})\n'.format(e.code,
-                                                                   e.reason))
+            # Python < 2.7.9
+            transport = BEINCCustomSafeTransport(
+                ca_cert=os.path.expanduser(args.cert))
+        server = xmlrpclib.ServerProxy(args.url,
+                                       transport=transport)
+        if args.pull:
+            print(server.pull(args.rname, args.password))
+        else:
+            print(server.push(args.rname,
+                              args.password,
+                              args.title,
+                              args.message))
+    except xmlrpclib.Fault as fault:
+        sys.stderr.write(
+            'BEINC server answered with errorCode={0}: {1}\n'.format(
+                fault.faultCode,
+                fault.faultString))
     except Exception as e:
         sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
@@ -101,8 +130,6 @@ def main():
     parser.add_argument('url',
                         metavar='URL',
                         type=str,
-                        #dest='url',
-                        #required=True,
                         help='Destination URL')
     parser.add_argument('-c', '--cert-file',
                         metavar='FILE',
@@ -116,12 +143,24 @@ def main():
                         dest='message',
                         default='BEINC message',
                         help='BEINC message')
+    parser.add_argument('-n', '--resource-name',
+                        metavar='NAME',
+                        type=str,
+                        dest='rname',
+                        required=True,
+                        help='The name of the BEINC-resource on '
+                        'the remote server')
     parser.add_argument('-p', '--password',
                         metavar='PASSWORD',
                         type=str,
                         dest='password',
                         default='',
                         help='Password')
+    parser.add_argument('--pull',
+                        action='store_true',
+                        dest='pull',
+                        default=False,
+                        help='Perform a pull operation (default: push)')
     parser.add_argument('-t', '--title',
                         metavar='TITLE',
                         type=str,
@@ -139,9 +178,9 @@ def main():
         except Exception as e:
             sys.stderr.write('Prompt terminated\n')
             sys.exit(errno.EACCES)
-    action_push(args)
+    action_execute(args)
     sys.exit(0)
 
-
+    
 if __name__ == '__main__':
     main()
