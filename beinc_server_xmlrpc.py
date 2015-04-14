@@ -106,7 +106,10 @@ class BEINCInstance(object):
                     '{0} {1}'.format(sys.argv[0], __version__))
             except Exception as e:
                 sys.stderr.write(
-                    'Unable to set up a notification object for {0} ({1})\n')
+                    'Unable to set up a '
+                    'pynotify notification object for "{0}" ({1})\n'.format(
+                        self.__name,
+                        e))
                 sys.exit(errno.EPERM)
             self.__osd_type = BEINC_OSD_TYPE_PYNOTIFY
         elif instance_dict['osd_system'].lower() == 'pyosd':
@@ -141,7 +144,10 @@ class BEINCInstance(object):
                     instance_dict.get('pyosd_color', 'blue'))
             except Exception as e:
                 sys.stderr.write(
-                    'Unable to set up a notification object for {0} ({1})\n')
+                    'Unable to set up a pyosd '
+                    'notification object for "{0}" ({1})\n'.format(
+                        self.__name,
+                        e))
                 sys.exit(errno.EPERM)
             self.__osd_type = BEINC_OSD_TYPE_PYOSD
 
@@ -342,7 +348,7 @@ def main():
                                                            e))
         sys.exit(errno.EIO)
     try:
-        if config_dict.get(config_version) != 2:
+        if config_dict.get('config_version') != 2:
             sys.stderr.write(
                 'Incompatible or missing config-file version for {0}\n'.format(
                     args.config_file))
