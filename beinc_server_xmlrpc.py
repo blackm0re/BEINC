@@ -27,6 +27,8 @@ import sys
 
 import OpenSSL
 
+from functools import wraps
+
 from twisted.web import xmlrpc, server
 from twisted.internet import protocol, reactor, ssl
 from twisted.python.filepath import FilePath
@@ -49,13 +51,24 @@ except ImportError as e:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '1.1'
+__version__ = '2.0'
 __license__ = 'GPL3'
 
 
 BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 BEINC_OSD_TYPE_PYOSD = 2
+
+BEINC_SSL_METHODS = {'SSLv3': OpenSSL.SSL.SSLv3_METHOD,
+                     'TLSv1': OpenSSL.SSL.TLSv1_METHOD}
+try:
+    errstr = "Warning: Current Twisted / OpenSSL version doesn't support TLSv1.1"
+    BEINC_SSL_METHODS.update({'TLSv1_1': OpenSSL.SSL.TLSv1_1_METHOD})
+    errstr = "Warning: Current Twisted / OpenSSL version doesn't support TLSv1.2"
+    BEINC_SSL_METHODS.update({'TLSv1_2': OpenSSL.SSL.TLSv1_2_METHOD})
+except:
+    sys.stderr.write(errstr + '\n')
+
 
 class BEINCInstance(object):
     """
@@ -201,6 +214,7 @@ def beinc_login_required(method):
     decorator for checking login credentials
     """
 
+    @wraps(method)
     def wrapper(self, resource_name, password, *args, **kwargs):
         try:
             instance = self.instances[resource_name]
@@ -268,11 +282,12 @@ class XMLRPCNotifyServer(xmlrpc.XMLRPC):
                     e))
             raise xmlrpc.Fault(500, 'Unable to send message')
 
+    @beinc_login_required
     def xmlrpc_pull(self, resource_name, password):
         """
         Return sum of arguments.
         """
-        instance = self.__instances[args[0]]
+        instance = self.__instances[resource_name]
         if not instance.queueable:
             raise xmlrpc.Fault(
                 405,
@@ -323,30 +338,48 @@ def main():
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
     except Exception as e:
-        sys.stderr.write('Unable to parse {0}: {1}'.format(args.config_file,
+        sys.stderr.write('Unable to parse {0}: {1}\n'.format(args.config_file,
                                                            e))
         sys.exit(errno.EIO)
-    ssl_certificate = config_dict['server']['general']['ssl_certificate']
-    ssl_private_key = config_dict['server']['general']['ssl_private_key']
-    try:        
+    try:
+        if config_dict.get(config_version) != 2:
+            sys.stderr.write(
+                'Incompatible or missing config-file version for {0}\n'.format(
+                    args.config_file))
+            sys.exit(1)
+        ssl_certificate = config_dict['server']['general'].get(
+            'ssl_certificate')
+        ssl_private_key = config_dict['server']['general'].get(
+            'ssl_private_key')
+        ssl_method_str = config_dict['server']['general'].get(
+            'ssl_method', 'auto')
+        ssl_acceptable_ciphers_str = config_dict['server']['general'].get(
+            'ssl_acceptable_ciphers', 'auto')
         beinc_server = XMLRPCNotifyServer(config_dict)
-        cert_path = FilePath(
-            config_dict['server']['general']['ssl_certificate'])
-        key_path = FilePath(
-            config_dict['server']['general']['ssl_private_key'])
-        private_certificate = ssl.PrivateCertificate.loadPEM(
-            key_path.getContent() + cert_path.getContent())
-        options = private_certificate.options()
-        options.method = OpenSSL.SSL.TLSv1_2_METHOD
-        # options.acceptableCiphers =
-        # ssl.AcceptableCiphers.fromOpenSSLCipherString('EXP-RC4-MD5')
-        reactor.listenSSL(args.port,
-                          server.Site(beinc_server),
-                          options,
-                          interface=args.hostname)
+        if ssl_certificate and ssl_private_key:
+            # SSL connection
+            cert_path = FilePath(ssl_certificate)
+            key_path = FilePath(ssl_private_key)
+            private_certificate = ssl.PrivateCertificate.loadPEM(
+                key_path.getContent() + cert_path.getContent())
+            options = private_certificate.options()
+            ssl_method = BEINC_SSL_METHODS.get(ssl_method_str)
+            if ssl_method:
+                options.method = ssl_method
+            if ssl_acceptable_ciphers_str.lower() != 'auto':
+                options.acceptableCiphers = ssl.AcceptableCiphers.fromOpenSSLCipherString(
+                    ssl_acceptable_ciphers_str)
+            reactor.listenSSL(args.port,
+                              server.Site(beinc_server),
+                              options,
+                              interface=args.hostname)
+        else:
+            reactor.listenTCP(args.port,
+                              server.Site(beinc_server),
+                              interface=args.hostname)
         reactor.run()
     except Exception as e:
-        sys.stderr.write("WebServer error: {0}".format(e))
+        sys.stderr.write('WebServer error: {0}\n'.format(e))
         sys.exit(1)
     sys.exit(0)
 

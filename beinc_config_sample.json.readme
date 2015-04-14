@@ -16,17 +16,27 @@ documentation to better illustrate the comments.
                  # It is only used by beinc_server.py and ignored by all other
                  # components
 
-        "general": {  # Applies to the whole server (cherrypy) For more info:
-        # http://docs.cherrypy.org/en/latest/refman/_cpserver.html
-
-            # The name of a registered SSL adaptation module
-            "ssl_module": "pyopenssl",
+        "general": {  # Applies to the whole server
 
             # The filename of the private key to use with SSL.
             "ssl_private_key": "/home/user/keys/key.pem",  # default: None
 
             # The filename of the SSL certificate to use
-            "ssl_certificate": "/home/user/certs/cert.crt"  # default: None
+            "ssl_certificate": "/home/user/certs/cert.crt",  # default: None
+
+			# A list of allowed ciphers in the format of 'openssl ciphers'
+			# "auto" - use the Twisted / OpenSSL defaults
+			"ssl_acceptable_ciphers": "auto",  # default: "auto"
+
+			# Encryption method for the BEINC server
+			# Possible values:
+			# "auto" - Let Twisted decide (use the newest possible method)
+			# "SSLv3" - SSLv3 (weak)
+			# "TLSv1" - TLSv1.0
+			# "TLSv1_1" - TLSv1.1
+			# "TLSv1_2" - TLSv1.2 (most secure, but requires OpenSSL >= 1.0.1e)
+			"ssl_method": "auto",  # default: "auto"
+
         },
 
         # A list of instances. Check README for general information about them!
@@ -185,10 +195,10 @@ documentation to better illustrate the comments.
         ]
     },
     # The version of this config file
-    # Default: 1 (you should really never leave it undefined)
+    # Default: 2 (you should really never leave it undefined)
     # Used by beinc_server and beinc_weechat to check whether
     # the config (.json) file is outdated.
     # Every future version of BEINC will be shipped with
     # beinc_config_sample.json and beinc_config_sample.json.readme 
-    "config_version": 1
+    "config_version": 2
 }

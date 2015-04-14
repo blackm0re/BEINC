@@ -1,9 +1,10 @@
 {
     "server": {
         "general": {
-            "ssl_module": "pyopenssl",
             "ssl_private_key": "key.pem",
             "ssl_certificate": "cert.crt",
+			"ssl_acceptable_ciphers": "auto",
+			"ssl_method": "auto",
             "daemonize": 1
         },
         "instances": [
@@ -27,7 +28,7 @@
         "targets": [
             {
                 "name": "weechat_main",
-                "target_url": "https://10.0.0.2:9898/push/secondtest",
+                "target_url": "https://10.0.0.2:9898",
                 "target_password": "changeme",
                 "target_cert_file": "",
                 "target_timestamp_format": "%H:%M:%S",
@@ -52,5 +53,5 @@
             }
         ]
     },
-    "config_version": 1
+    "config_version": 2
 }
