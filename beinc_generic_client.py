@@ -34,6 +34,15 @@ __version__ = '1.0'
 __license__ = 'GPL3'
 
 
+BEINC_SSL_METHODS = {'SSLv3': ssl.PROTOCOL_SSLv3,
+                     'TLSv1': ssl.PROTOCOL_TLSv1}
+try:
+    BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
+    BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
+except:
+    pass
+
+
 class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
     """
     This class allows communication via SSL.
@@ -46,12 +55,12 @@ class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
 
     def __init__(self, host, port=None, key_file=None, cert_file=None,
                  strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                 source_address=None, ca_cert=None):
+                 source_address=None, custom_ssl_options={}):
         httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
                                         source_address)
         self.key_file = key_file
         self.cert_file = cert_file
-        self.ca_cert = ca_cert
+        self.custom_ssl_options = custom_ssl_options
 
     def connect(self):
         "Connect to a host on a given (SSL) port."
@@ -63,15 +72,15 @@ class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
         self.sock = ssl.wrap_socket(sock,
                                     self.key_file,
                                     self.cert_file,
-                                    cert_reqs=ssl.CERT_REQUIRED,
-                                    ca_certs=self.ca_cert)
+                                    **self.custom_ssl_options)
+
 
 class BEINCCustomSafeTransport(xmlrpclib.Transport):
 
-    def __init__(self, use_datetime=0, ca_cert=None):
+    def __init__(self, use_datetime=0, custom_ssl_options={}):
         xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
-        self.ca_cert = ca_cert
-                            
+        self.custom_ssl_options = custom_ssl_options
+
     def make_connection(self, host):
         if self._connection and host == self._connection[0]:
             return self._connection[1]
@@ -83,10 +92,11 @@ class BEINCCustomSafeTransport(xmlrpclib.Transport):
             )
         else:
             chost, self._extra_headers, x509 = self.get_host_info(host)
-            self._connection = host, HTTPS(chost,
-                                           None,
-                                           ca_cert=self.ca_cert,
-                                           **(x509 or {}))
+            self._connection = host, HTTPS(
+                chost,
+                None,
+                custom_ssl_options=self.custom_ssl_options,
+                **(x509 or {}))
             return self._connection[1]
 
 
@@ -94,17 +104,32 @@ def action_execute(args):
     """
     """
     try:
+        ssl_version = BEINC_SSL_METHODS.get(args.ssl_version,
+                                            ssl.PROTOCOL_SSLv23)
         if sys.hexversion >= 0x20709f0:
             # Python >= 2.7.9
-            context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            context = ssl.SSLContext(ssl_version)
             context.verify_mode = ssl.CERT_REQUIRED
-            context.check_hostname = False
-            context.load_verify_locations(os.path.expanduser(args.cert))
+            if args.no_cert_validate:
+                context.verify_mode = ssl.CERT_NONE
+            context.check_hostname = bool(not args.disable_hostname_check)
+            if args.cert and not args.no_cert_validate:
+                context.load_verify_locations(os.path.expanduser(args.cert))
+            if args.ciphers:
+                context.set_ciphers(args.ciphers)
             transport = xmlrpclib.SafeTransport(context=context)
         else:
             # Python < 2.7.9
+            ssl_options = {}
+            ssl_options['ssl_version'] = ssl_version
+            if args.cert and not args.no_cert_validate:
+                ssl_options['ca_certs'] = os.path.expanduser(args.cert)
+            if not args.no_cert_validate:
+                ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
+            if args.ciphers:
+                ssl_options['ciphers'] = args.ciphers
             transport = BEINCCustomSafeTransport(
-                ca_cert=os.path.expanduser(args.cert))
+                custom_ssl_options=ssl_options)
         server = xmlrpclib.ServerProxy(args.url,
                                        transport=transport)
         if args.pull:
@@ -119,6 +144,9 @@ def action_execute(args):
             'BEINC server answered with errorCode={0}: {1}\n'.format(
                 fault.faultCode,
                 fault.faultString))
+    except ssl.SSLError as e:
+        sys.stderr.write('BEINC SSL/TLS error: {0}\n'.format(e))
+        sys.exit(errno.EPERM)
     except Exception as e:
         sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
@@ -137,6 +165,12 @@ def main():
                         dest='cert',
                         default='',
                         help='BEINC CA-cert to check the server-cert against')
+    parser.add_argument('-C', '--ciphers',
+                        metavar='CIPHERS',
+                        type=str,
+                        dest='ciphers',
+                        default='',
+                        help='Preferred ciphers list (default: auto)')
     parser.add_argument('-m', '--message',
                         metavar='MESSAGE',
                         type=str,
@@ -156,11 +190,22 @@ def main():
                         dest='password',
                         default='',
                         help='Password')
-    parser.add_argument('--pull',
-                        action='store_true',
-                        dest='pull',
-                        default=False,
-                        help='Perform a pull operation (default: push)')
+    if sys.hexversion >= 0x20709f0:
+        parser.add_argument('-s', '--ssl-version',
+                            metavar='VERSION',
+                            type=str,
+                            dest='ssl_version',
+                            default='auto',
+                            help='Use SSL version: auto (default), '
+                            'SSLv3, TLSv1, TLSv1_1, TLSv1_2')
+    else:
+        parser.add_argument('-s', '--ssl-version',
+                            metavar='VERSION',
+                            type=str,
+                            dest='ssl_version',
+                            default='auto',
+                            help='Use SSL version: auto (default), '
+                            'SSLv3, TLSv1')
     parser.add_argument('-t', '--title',
                         metavar='TITLE',
                         type=str,
@@ -171,6 +216,23 @@ def main():
                         action='version',
                         version='%(prog)s {0}'.format(__version__),
                         help='display program-version and exit')
+    if sys.hexversion >= 0x20709f0:
+        parser.add_argument('--disable-hostname-check',
+                            action='store_true',
+                            dest='disable_hostname_check',
+                            default=False,
+                            help='Do not check whether server cert '
+                            'matches server hostname')
+    parser.add_argument('--no-cert-validate',
+                        action='store_true',
+                        dest='no_cert_validate',
+                        default=False,
+                        help='Do not validate server certificate')
+    parser.add_argument('--pull',
+                        action='store_true',
+                        dest='pull',
+                        default=False,
+                        help='Perform a pull operation (default: push)')
     args = parser.parse_args()
     if not args.password:
         try:
@@ -181,6 +243,6 @@ def main():
     action_execute(args)
     sys.exit(0)
 
-    
+
 if __name__ == '__main__':
     main()

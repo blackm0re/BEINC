@@ -62,9 +62,11 @@ BEINC_OSD_TYPE_PYOSD = 2
 BEINC_SSL_METHODS = {'SSLv3': OpenSSL.SSL.SSLv3_METHOD,
                      'TLSv1': OpenSSL.SSL.TLSv1_METHOD}
 try:
-    errstr = "Warning: Current Twisted / OpenSSL version doesn't support TLSv1.1"
+    errstr = ("Warning: Current Twisted / "
+              "OpenSSL version doesn't support TLSv1.1")
     BEINC_SSL_METHODS.update({'TLSv1_1': OpenSSL.SSL.TLSv1_1_METHOD})
-    errstr = "Warning: Current Twisted / OpenSSL version doesn't support TLSv1.2"
+    errstr = ("Warning: Current Twisted / " +
+              "OpenSSL version doesn't support TLSv1.2")
     BEINC_SSL_METHODS.update({'TLSv1_2': OpenSSL.SSL.TLSv1_2_METHOD})
 except:
     sys.stderr.write(errstr + '\n')
@@ -217,7 +219,7 @@ class BEINCInstance(object):
 
 def beinc_login_required(method):
     """
-    decorator for checking login credentials
+    Decorator for checking login credentials
     """
 
     @wraps(method)
@@ -339,8 +341,8 @@ def main():
         action='version',
         version='%(prog)s {0}'.format(__version__),
         help='Display program-version and exit')
-    log.startLogging(sys.stdout)
     args = parser.parse_args()
+    log.startLogging(sys.stdout)
     try:
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
@@ -374,8 +376,9 @@ def main():
             if ssl_method:
                 options.method = ssl_method
             if ssl_acceptable_ciphers_str.lower() != 'auto':
-                options.acceptableCiphers = ssl.AcceptableCiphers.fromOpenSSLCipherString(
-                    ssl_acceptable_ciphers_str)
+                options.acceptableCiphers = (
+                    ssl.AcceptableCiphers.fromOpenSSLCipherString(
+                        ssl_acceptable_ciphers_str))
             reactor.listenSSL(args.port,
                               server.Site(beinc_server),
                               options,
