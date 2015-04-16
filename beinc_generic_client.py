@@ -109,12 +109,11 @@ def action_execute(args):
         if sys.hexversion >= 0x20709f0:
             # Python >= 2.7.9
             context = ssl.SSLContext(ssl_version)
-            context.verify_mode = ssl.CERT_REQUIRED
-            if args.no_cert_validate:
-                context.verify_mode = ssl.CERT_NONE
-            context.check_hostname = bool(not args.disable_hostname_check)
-            if args.cert and not args.no_cert_validate:
+            context.verify_mode = ssl.CERT_NONE
+            if args.cert:
+                context.verify_mode = ssl.CERT_REQUIRED
                 context.load_verify_locations(os.path.expanduser(args.cert))
+                context.check_hostname = bool(not args.disable_hostname_check)
             if args.ciphers:
                 context.set_ciphers(args.ciphers)
             transport = xmlrpclib.SafeTransport(context=context)
@@ -122,9 +121,8 @@ def action_execute(args):
             # Python < 2.7.9
             ssl_options = {}
             ssl_options['ssl_version'] = ssl_version
-            if args.cert and not args.no_cert_validate:
+            if args.cert:
                 ssl_options['ca_certs'] = os.path.expanduser(args.cert)
-            if not args.no_cert_validate:
                 ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
             if args.ciphers:
                 ssl_options['ciphers'] = args.ciphers
@@ -199,12 +197,6 @@ def main():
         dest='rname',
         required=True,
         help='The name of the BEINC-resource on the remote server')
-    parser.add_argument(
-        '--no-cert-validate',
-        action='store_true',
-        dest='no_cert_validate',
-        default=False,
-        help='Do not validate server certificate')
     parser.add_argument(
         '-p', '--password',
         metavar='PASSWORD[FILE]',

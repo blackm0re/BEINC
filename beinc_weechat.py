@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
@@ -54,34 +53,61 @@ except:
     pass
 
 
-class ValidHTTPSConnection(httplib.HTTPConnection):
+class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
     """
-    Implements a simple CERT verification functionality
-    """
+    This class allows communication via SSL.
 
+    It is a reimplementation of httplib.HTTPSConnection and
+    allows the server certificate to be validated against CA
+    This functionality lacks in Python < 2.7.9
+    """
     default_port = httplib.HTTPS_PORT
 
-    def __init__(self, *args, **kwargs):
-        httplib.HTTPConnection.__init__(self, *args, **kwargs)
+    def __init__(self, host, port=None, key_file=None, cert_file=None,
+                 strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+                 source_address=None, custom_ssl_options={}):
+        httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
+                                        source_address)
+        self.key_file = key_file
+        self.cert_file = cert_file
+        self.custom_ssl_options = custom_ssl_options
 
     def connect(self):
+        "Connect to a host on a given (SSL) port."
         sock = socket.create_connection((self.host, self.port),
                                         self.timeout, self.source_address)
         if self._tunnel_host:
             self.sock = sock
             self._tunnel()
         self.sock = ssl.wrap_socket(sock,
-                                    ca_certs=global_beinc_cert_file,
-                                    cert_reqs=ssl.CERT_REQUIRED)
+                                    self.key_file,
+                                    self.cert_file,
+                                    **self.custom_ssl_options)
 
 
-class ValidHTTPSHandler(urllib2.HTTPSHandler):
-    """
-    Implements a simple CERT verification functionality
-    """
+class BEINCCustomSafeTransport(xmlrpclib.Transport):
 
-    def https_open(self, req):
-            return self.do_open(ValidHTTPSConnection, req)
+    def __init__(self, use_datetime=0, custom_ssl_options={}):
+        xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
+        self.custom_ssl_options = custom_ssl_options
+
+    def make_connection(self, host):
+        if self._connection and host == self._connection[0]:
+            return self._connection[1]
+        try:
+            HTTPS = BEINCCustomHTTPSConnection
+        except AttributeError:
+            raise NotImplementedError(
+                "your version of httplib doesn't support HTTPS"
+            )
+        else:
+            chost, self._extra_headers, x509 = self.get_host_info(host)
+            self._connection = host, HTTPS(
+                chost,
+                None,
+                custom_ssl_options=self.custom_ssl_options,
+                **(x509 or {}))
+            return self._connection[1]
 
 
 class WeechatTarget(object):
@@ -321,14 +347,13 @@ class WeechatTarget(object):
             if sys.hexversion >= 0x20709f0:
                 # Python >= 2.7.9
                 context = ssl.SSLContext(ssl_version)
-                context.verify_mode = ssl.CERT_REQUIRED
-                if not self.__cert_file:
-                    context.verify_mode = ssl.CERT_NONE
-                context.check_hostname = bool(
-                    not self.__disable_hostname_check)
+                context.verify_mode = ssl.CERT_NONE
                 if self.__cert_file:
+                    context.verify_mode = ssl.CERT_REQUIRED
                     context.load_verify_locations(os.path.expanduser(
                         self.__cert_file))
+                    context.check_hostname = bool(
+                        not self.__disable_hostname_check)
                 if self.__ciphers:
                     context.set_ciphers(self.__ciphers)
                 transport = xmlrpclib.SafeTransport(context=context)
