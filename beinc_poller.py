@@ -252,7 +252,7 @@ def main():
         type=str,
         dest='cert',
         default='',
-        help='BEINC CA-cert to check the server-cert against '
+        help='CA-cert to check the server-cert against '
         '(default: Check disabled)')
     parser.add_argument(
         '--ciphers',
@@ -274,14 +274,14 @@ def main():
         type=str,
         dest='font',
         default=None,
-        help='Custom font for "pyosd" (default: Default font)')
+        help='Custom font for "pyosd" (default: pyosd default font)')
     parser.add_argument(
         '-f', '--frequency',
         metavar='SECONDS',
         type=int,
         dest='frequency',
         default=10,
-        help='Polling frequency in seconds (default: 10)')    
+        help='Polling frequency in seconds (default: 10)')
     parser.add_argument(
         '--h-offset',
         metavar='OFFSET',

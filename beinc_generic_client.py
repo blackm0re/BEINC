@@ -155,91 +155,113 @@ def action_execute(args):
 def main():
     parser = argparse.ArgumentParser(
         description='The following options are available')
-    parser.add_argument('url',
-                        metavar='URL',
-                        type=str,
-                        help='Destination URL')
-    parser.add_argument('-c', '--cert-file',
-                        metavar='FILE',
-                        type=str,
-                        dest='cert',
-                        default='',
-                        help='BEINC CA-cert to check the server-cert against')
-    parser.add_argument('-C', '--ciphers',
-                        metavar='CIPHERS',
-                        type=str,
-                        dest='ciphers',
-                        default='',
-                        help='Preferred ciphers list (default: auto)')
-    parser.add_argument('-m', '--message',
-                        metavar='MESSAGE',
-                        type=str,
-                        dest='message',
-                        default='BEINC message',
-                        help='BEINC message')
-    parser.add_argument('-n', '--resource-name',
-                        metavar='NAME',
-                        type=str,
-                        dest='rname',
-                        required=True,
-                        help='The name of the BEINC-resource on '
-                        'the remote server')
-    parser.add_argument('-p', '--password',
-                        metavar='PASSWORD',
-                        type=str,
-                        dest='password',
-                        default='',
-                        help='Password')
+    parser.add_argument(
+        'url',
+        metavar='URL',
+        type=str,
+        help='BEINC server destination URL')
+    parser.add_argument(
+        '-c', '--cert-file',
+        metavar='FILE',
+        type=str,
+        dest='cert',
+        default='',
+        help='CA-cert to check the server-cert against'
+        '(default: Check disabled)')
+    parser.add_argument(
+        '--ciphers',
+        metavar='CIPHERS',
+        type=str,
+        dest='ciphers',
+        default='',
+        help='Preferred ciphers list (default: auto)')
     if sys.hexversion >= 0x20709f0:
-        parser.add_argument('-s', '--ssl-version',
-                            metavar='VERSION',
-                            type=str,
-                            dest='ssl_version',
-                            default='auto',
-                            help='Use SSL version: auto (default), '
-                            'SSLv3, TLSv1, TLSv1_1, TLSv1_2')
+        parser.add_argument(
+            '--disable-hostname-check',
+            action='store_true',
+            dest='disable_hostname_check',
+            default=False,
+            help='Do not check whether server cert matches server hostname')
+    parser.add_argument(
+        '-m', '--message',
+        metavar='MESSAGE',
+        type=str,
+        dest='message',
+        default='BEINC message',
+        help='BEINC message (default: "BEINC message")')
+    parser.add_argument(
+        '-n', '--resource-name',
+        metavar='NAME',
+        type=str,
+        dest='rname',
+        required=True,
+        help='The name of the BEINC-resource on the remote server')
+    parser.add_argument(
+        '--no-cert-validate',
+        action='store_true',
+        dest='no_cert_validate',
+        default=False,
+        help='Do not validate server certificate')
+    parser.add_argument(
+        '-p', '--password',
+        metavar='PASSWORD[FILE]',
+        type=str,
+        dest='password',
+        default='',
+        help='BEINC taget-password / text-file containing the target password'
+        ' (default & recommended: prompt for passwd)')
+    parser.add_argument(
+        '--pull',
+        action='store_true',
+        dest='pull',
+        default=False,
+        help='Perform a pull operation (default: push)')
+    if sys.hexversion >= 0x20709f0:
+        parser.add_argument(
+            '-s', '--ssl-version',
+            metavar='VERSION',
+            type=str,
+            dest='ssl_version',
+            default='auto',
+            help='Use SSL version: "auto" (default), '
+            '"SSLv3", "TLSv1", "TLSv1_1", "TLSv1_2"')
     else:
-        parser.add_argument('-s', '--ssl-version',
-                            metavar='VERSION',
-                            type=str,
-                            dest='ssl_version',
-                            default='auto',
-                            help='Use SSL version: auto (default), '
-                            'SSLv3, TLSv1')
-    parser.add_argument('-t', '--title',
-                        metavar='TITLE',
-                        type=str,
-                        dest='title',
-                        default='BEINC title',
-                        help='BEINC title')
-    parser.add_argument('-v', '--version',
-                        action='version',
-                        version='%(prog)s {0}'.format(__version__),
-                        help='display program-version and exit')
-    if sys.hexversion >= 0x20709f0:
-        parser.add_argument('--disable-hostname-check',
-                            action='store_true',
-                            dest='disable_hostname_check',
-                            default=False,
-                            help='Do not check whether server cert '
-                            'matches server hostname')
-    parser.add_argument('--no-cert-validate',
-                        action='store_true',
-                        dest='no_cert_validate',
-                        default=False,
-                        help='Do not validate server certificate')
-    parser.add_argument('--pull',
-                        action='store_true',
-                        dest='pull',
-                        default=False,
-                        help='Perform a pull operation (default: push)')
+        parser.add_argument(
+            '-s', '--ssl-version',
+            metavar='VERSION',
+            type=str,
+            dest='ssl_version',
+            default='auto',
+            help='Use SSL version: "auto" (default), "SSLv3", "TLSv1"')
+    parser.add_argument(
+        '-t', '--title',
+        metavar='TITLE',
+        type=str,
+        dest='title',
+        default='BEINC title',
+        help='BEINC title (default: "BEINC title"')
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s {0}'.format(__version__),
+        help='display program-version and exit')
     args = parser.parse_args()
+
     if not args.password:
         try:
             args.password = getpass.getpass()
         except Exception as e:
             sys.stderr.write('Prompt terminated\n')
             sys.exit(errno.EACCES)
+    elif os.path.isfile(args.password):
+        try:
+            with open(args.password, 'r') as fp:
+                passwd = fp.readline()
+                if passwd.strip():
+                    args.password = passwd.strip()
+        except Exception as e:
+            sys.stderr.write('Unable to open password file: {0}'.format(e))
+            sys.exit(1)
     action_execute(args)
     sys.exit(0)
 
