@@ -23,7 +23,8 @@ import errno
 import getpass
 import httplib  # for Python < 2.7.9
 import os
-import socket  # for Python < 2.7.9
+import sched
+import socket
 import ssl
 import sys
 import time
@@ -219,6 +220,9 @@ def poll_notifications(scheduler, args):
     except ssl.SSLError as e:
         sys.stderr.write('BEINC SSL/TLS error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
+    except socket.error as e:
+        sys.stderr.write('BEINC connection error: {0}\n'.format(e))
+        sys.exit(errno.EPERM)
     except Exception as e:
         sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
@@ -342,6 +346,13 @@ def main():
             default='auto',
             help='Use SSL version: "auto" (default), "SSLv3", "TLSv1"')
     parser.add_argument(
+        '-T', '--socket-timeout',
+        metavar='SECONDS',
+        type=int,
+        dest='socket_timeout',
+        default=3,
+        help='Socket timeout in seconds (0=Python default) (default: 3)')
+    parser.add_argument(
         '-t', '--osd-timeout',
         metavar='SECONDS',
         type=int,
@@ -376,6 +387,8 @@ def main():
         except Exception as e:
             sys.stderr.write('Unable to open password file: {0}'.format(e))
             sys.exit(1)
+    if args.socket_timeout:
+        socket.setdefaulttimeout(args.socket_timeout)
     scheduler = sched.scheduler(time.time, time.sleep)
     scheduler.enter(args.frequency,
                     1,
