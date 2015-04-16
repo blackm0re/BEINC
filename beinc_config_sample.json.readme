@@ -104,7 +104,7 @@ documentation to better illustrate the comments.
                 
                 # Target URL.
                 # Default: None (making the target useless)
-                "target_url": "https://10.0.0.2:9898/push/secondtest",
+                "target_url": "https://10.0.0.2:9998",
 
                 # Password corresponding to the target BEINC instance
                 # Default: None
@@ -116,6 +116,21 @@ documentation to better illustrate the comments.
                 # It is *highly recommended* to use an SSL connection as well as
                 # to verify the server's certificate 
                 "target_cert_file": "",
+
+				# A list of preferred ciphers for this target
+				# Default: "" (use the OpenSSL default ciphers)
+				"ciphers": "ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
+
+				# Don't check whether the target's hostname matches the server's
+				# certificate. (Only Python >= 2.7.9)
+				# Default: 0
+				"disable-hostname-check": 0,
+
+				# Force the client to use a specified SSL/TLS version
+				# Valid values: "auto", "SSLv3", "TLSv1", "TLSv1_1", "TLSv1_2"
+				# N.B. "TLSv1_1" and "TLSv1_2" only available in Python >= 2.7.9
+				# Default: "auto" (Let's OpenSSL select the best option)
+				"ssl_version": "auto",
 
                 # The timestamp-format used by the BEINC weechat client
                 # See 

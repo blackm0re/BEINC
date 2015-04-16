@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v1.0
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
 # Copyright (C) 2013-2015 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
@@ -26,14 +26,13 @@ import random
 import socket
 import ssl
 import sys
-import urllib
-import urllib2
+import xmlrpclib
 
 import weechat
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL3'
 
 
@@ -45,6 +44,14 @@ BEINC_POLICY_NONE = 0
 BEINC_POLICY_ALL = 1
 BEINC_POLICY_LIST_ONLY = 2
 BEINC_CURRENT_CONFIG_VERSION = 1
+
+BEINC_SSL_METHODS = {'SSLv3': ssl.PROTOCOL_SSLv3,
+                     'TLSv1': ssl.PROTOCOL_TLSv1}
+try:
+    BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
+    BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
+except:
+    pass
 
 
 class ValidHTTPSConnection(httplib.HTTPConnection):
@@ -121,6 +128,11 @@ class WeechatTarget(object):
         self.__debug = bool(target_dict.get('debug', False))
         self.__enabled = bool(target_dict.get('enabled', True))
         self.__socket_timeout = int(target_dict.get('socket_timeout', 3))
+        self.__ciphers = target_dict.get('ciphers', '')
+        self.__disable_hostname_check = bool(
+            target_dict.get('disable-hostname-check', False))
+        self.__ssl_version = target_dict.get('ssl_version', 'auto')
+        self.__connection = None  # xmlrpclib.ServerProxy instance
 
     @property
     def name(self):
@@ -297,6 +309,63 @@ class WeechatTarget(object):
                 beinc_prnt(
                     'BEINC DEBUG: send_broadcast_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
+
+    def __connection_setup(self):
+        """
+        """
+        if self.__connection:
+            return True
+        try:
+            ssl_version = BEINC_SSL_METHODS.get(self.__ssl_version,
+                                                ssl.PROTOCOL_SSLv23)
+            if sys.hexversion >= 0x20709f0:
+                # Python >= 2.7.9
+                context = ssl.SSLContext(ssl_version)
+                context.verify_mode = ssl.CERT_REQUIRED
+                if not self.__cert_file:
+                    context.verify_mode = ssl.CERT_NONE
+                context.check_hostname = bool(
+                    not self.__disable_hostname_check)
+                if self.__cert_file:
+                    context.load_verify_locations(os.path.expanduser(
+                        self.__cert_file))
+                if self.__ciphers:
+                    context.set_ciphers(self.__ciphers)
+                transport = xmlrpclib.SafeTransport(context=context)
+            else:
+                # Python < 2.7.9
+                ssl_options = {}
+                ssl_options['ssl_version'] = ssl_version
+                if self.__cert_file:
+                    ssl_options['ca_certs'] = os.path.expanduser(
+                        self.__cert_file)
+                    ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
+                if self.__ciphers:
+                    ssl_options['ciphers'] = self.__ciphers
+                transport = BEINCCustomSafeTransport(
+                    custom_ssl_options=ssl_options)
+            self.__connection = xmlrpclib.ServerProxy(self.__url,
+                                                      transport=transport)
+            return True
+        except xmlrpclib.Fault as fault:
+            if self.__debug:
+                beinc_prnt(
+                    'BEINC DEBUG: Server answered with '
+                    'errorCode={0}: {1}\n'.format(
+                        fault.faultCode,
+                        fault.faultString))
+        except ssl.SSLError as e:
+            if self.__debug:
+                beinc_prnt('BEINC DEBUG: SSL/TLS error: {0}\n'.format(e))
+        except socket.error as e:
+            if self.__debug:
+                beinc_prnt('BEINC DEBUG: Connection error: {0}\n'.format(e))
+        except Exception as e:
+            if self.__debug:
+                beinc_prnt('BEINC DEBUG: Generic client error: {0}\n'.format(
+                    e))
+        self.__connection = None
+        return False
 
     def __fetch_formatted_str(self, template, values):
         """
