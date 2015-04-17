@@ -42,7 +42,7 @@ global_values = dict()
 BEINC_POLICY_NONE = 0
 BEINC_POLICY_ALL = 1
 BEINC_POLICY_LIST_ONLY = 2
-BEINC_CURRENT_CONFIG_VERSION = 1
+BEINC_CURRENT_CONFIG_VERSION = 2
 
 BEINC_SSL_METHODS = {'SSLv3': ssl.PROTOCOL_SSLv3,
                      'TLSv1': ssl.PROTOCOL_TLSv1}
@@ -227,19 +227,25 @@ class WeechatTarget(object):
     def __repr__(self):
         """
         """
-        return ('name: {0}\nurl: {1}\nchannel_list: {2}\nnick_list: {3}\n'
-                'channel_messages_policy: {4}\nprivate_messages_policy: {5}\n'
-                'notifications_policy: {6}\nenabled: {7}\nconnected: {8}\n'
-                'debug: {9}\n\n'.format(
+        return ('name: {0}\nurl: {1}\nenabled: {2}\nchannel_list: {3}\n'
+                'nick_list: {4}\nchannel_messages_policy: {5}\n'
+                'private_messages_policy: {6}\nnotifications_policy: {7}\n'
+                'connected: {8}\nsocket timeout: {9}\nssl-version: {10}\n'
+                'ciphers: {11}\ndisable_hostname_check: {12}\n'
+                'debug: {13}\n\n'.format(
                     self.__name,
                     self.__url,
+                    'yes' if self.__enabled else 'no',
                     ', '.join(self.__chans),
                     ', '.join(self.__nicks),
                     self.__chan_messages_policy,
                     self.__priv_messages_policy,
                     self.__notifications_policy,
-                    'yes' if self.__enabled else 'no',
                     'no' if self.__connection is None else 'yes',
+                    self.__socket_timeout,
+                    self.__ssl_version,
+                    self.__ssl_ciphers or 'default',
+                    'yes' if self.__disable_hostname_check else 'no'
                     'yes' if self.__debug else 'no'))
 
     def send_private_message_notification(self, values):
