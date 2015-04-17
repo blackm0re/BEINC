@@ -239,7 +239,7 @@ class WeechatTarget(object):
                     self.__priv_messages_policy,
                     self.__notifications_policy,
                     'yes' if self.__enabled else 'no',
-                    'yes' if bool(self.__connection) else 'no',
+                    'no' if self.__connection is None else 'yes',
                     'yes' if self.__debug else 'no'))
 
     def send_private_message_notification(self, values):
