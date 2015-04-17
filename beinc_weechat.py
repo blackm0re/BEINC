@@ -159,6 +159,7 @@ class WeechatTarget(object):
             target_dict.get('disable-hostname-check', False))
         self.__ssl_version = target_dict.get('ssl_version', 'auto')
         self.__connection = None  # xmlrpclib.ServerProxy instance
+        self.__connection_setup()
 
     @property
     def name(self):
@@ -331,11 +332,11 @@ class WeechatTarget(object):
     def __connection_setup(self):
         """
         """
-        if self.__connection:
+        if self.__connection is not None:
             return True
         if self.__debug:
             beinc_prnt(
-                'BEINC DEBUG: (Re)Establishing connection to: {0}'.format(
+                'BEINC DEBUG: Establishing proxy-connection to: {0}'.format(
                     self.__url))
         try:
             ssl_version = BEINC_SSL_METHODS.get(self.__ssl_version,
@@ -415,7 +416,7 @@ class WeechatTarget(object):
         XMLRPC request
         """
         try:
-            if not self.__connection and not self.__connection_setup():
+            if self.__connection is None and not self.__connection_setup():
                 return False
             if self.__socket_timeout:
                 socket.setdefaulttimeout(self.__socket_timeout)
@@ -696,9 +697,9 @@ def beinc_init():
 
 weechat.register(
     'beinc_weechat',
-    'Simeon Simeonov',
-    '1.0',
-    'GPL3',
+    __author__,
+    __version__,
+    __license__,
     'Blackmore\'s Extended IRC Notification Collection (Weechat Client)',
     '',
     '')
