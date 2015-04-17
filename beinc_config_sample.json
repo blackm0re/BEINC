@@ -4,14 +4,13 @@
             "ssl_private_key": "key.pem",
             "ssl_certificate": "cert.crt",
 			"ssl_acceptable_ciphers": "auto",
-			"ssl_method": "auto",
-            "daemonize": 1
+			"ssl_version": "auto"
         },
         "instances": [
             {
                 "name": "test",
                 "password": "changeme",
-                "osd_system": "pynotify",
+                "osd_system": "pyosd",
                 "osd_timeout": 5,
                 "pyosd_font": "",
                 "pyosd_vertical_offset": 120,

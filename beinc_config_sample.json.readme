@@ -26,7 +26,7 @@ documentation to better illustrate the comments.
 
 			# A list of allowed ciphers in the format of 'openssl ciphers'
 			# "auto" - use the Twisted / OpenSSL defaults
-			"ssl_acceptable_ciphers": "auto",  # default: "auto"
+			"ssl_ciphers": "auto",  # default: "auto"
 
 			# Encryption method for the BEINC server
 			# Possible values:
@@ -35,7 +35,7 @@ documentation to better illustrate the comments.
 			# "TLSv1" - TLSv1.0
 			# "TLSv1_1" - TLSv1.1
 			# "TLSv1_2" - TLSv1.2 (most secure, but requires OpenSSL >= 1.0.1e)
-			"ssl_method": "auto",  # default: "auto"
+			"ssl_version": "auto",  # default: "auto"
 
         },
 
@@ -119,7 +119,7 @@ documentation to better illustrate the comments.
 
 				# A list of preferred ciphers for this target
 				# Default: "" (use the OpenSSL default ciphers)
-				"ciphers": "ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
+				"ssl_ciphers": "ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
 
 				# Don't check whether the target's hostname matches the server's
 				# certificate. (Only Python >= 2.7.9)

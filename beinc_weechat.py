@@ -154,7 +154,7 @@ class WeechatTarget(object):
         self.__debug = bool(target_dict.get('debug', False))
         self.__enabled = bool(target_dict.get('enabled', True))
         self.__socket_timeout = int(target_dict.get('socket_timeout', 3))
-        self.__ciphers = target_dict.get('ciphers', '')
+        self.__ssl_ciphers = target_dict.get('ssl_ciphers', '')
         self.__disable_hostname_check = bool(
             target_dict.get('disable-hostname-check', False))
         self.__ssl_version = target_dict.get('ssl_version', 'auto')
@@ -333,6 +333,10 @@ class WeechatTarget(object):
         """
         if self.__connection:
             return True
+        if self.__debug:
+            beinc_prnt(
+                'BEINC DEBUG: (Re)Establishing connection to: {0}'.format(
+                    self.__url))
         try:
             ssl_version = BEINC_SSL_METHODS.get(self.__ssl_version,
                                                 ssl.PROTOCOL_SSLv23)
@@ -346,8 +350,8 @@ class WeechatTarget(object):
                         self.__cert_file))
                     context.check_hostname = bool(
                         not self.__disable_hostname_check)
-                if self.__ciphers:
-                    context.set_ciphers(self.__ciphers)
+                if self.__ssl_ciphers:
+                    context.set_ciphers(self.__ssl_ciphers)
                 transport = xmlrpclib.SafeTransport(context=context)
             else:
                 # Python < 2.7.9
@@ -357,8 +361,8 @@ class WeechatTarget(object):
                     ssl_options['ca_certs'] = os.path.expanduser(
                         self.__cert_file)
                     ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-                if self.__ciphers:
-                    ssl_options['ciphers'] = self.__ciphers
+                if self.__ssl_ciphers:
+                    ssl_options['ciphers'] = self.__ssl_ciphers
                 transport = BEINCCustomSafeTransport(
                     custom_ssl_options=ssl_options)
             self.__connection = xmlrpclib.ServerProxy(self.__url,

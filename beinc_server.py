@@ -361,9 +361,9 @@ def main():
         ssl_private_key = config_dict['server']['general'].get(
             'ssl_private_key')
         ssl_method_str = config_dict['server']['general'].get(
-            'ssl_method', 'auto')
+            'ssl_version', 'auto')
         ssl_acceptable_ciphers_str = config_dict['server']['general'].get(
-            'ssl_acceptable_ciphers', 'auto')
+            'ssl_ciphers', 'auto')
         beinc_server = XMLRPCNotifyServer(config_dict)
         if ssl_certificate and ssl_private_key:
             # SSL connection
