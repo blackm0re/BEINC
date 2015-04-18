@@ -80,25 +80,24 @@ There are 2 operations that can be done on an instance:
           A pull is available only for instances defined for queueing. 
           (read beinc_config_sample.json.readme for details!)
 Example: 
-If you defined a beinc_server.py instance with SSL-support called "beinc_test",
-your URL for pushing will be: https://hostname:port/push/beinc_test
-and for polling: https://hostname:port/pull/beinc_test
+If you defined a beinc_server.py instance with SSL-support,
+your URL will be: https://hostname:port
 
 
 Supported systems & requirements
 --------------------------------
 Any system running the software required for the selected components.
-All components tested on: Gentoo GNU/Linux 2013,2014,
-                          Ubuntu GNU/Linux 14.4,13.10,
-                          FreeBSD 9.x
+All components tested on: Gentoo GNU/Linux 2014,2015,
+                          Ubuntu GNU/Linux 14.4,14.10,
+                          FreeBSD 10.x
 
 
 Requirements:
-All components: Python 2.7.*
-beinc_server.py: cherrypy >= 3.2.0, pyopenssl >= 0.13.0 (opntional (ssl support)),
+All components: Python 2.7.* (for TLS1.1 and TLS1.2 client support you ned Python>=2.7.9)
+beinc_server.py: Twisted Web >= 14.0, pyopenssl >= 0.13.0,
                  pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
 beinc_weechat.py: Weechat >= 0.4.0
-beinc_poller.py: pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
+beinc_poller.py: pynotify >= 0.1 or pyosd >= 0.2
 beinc_generic_client.py: No additional software required
 
 Read INSTALL in this very same folder for more details about installing the requirements!

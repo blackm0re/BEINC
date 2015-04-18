@@ -30,7 +30,7 @@ documentation to better illustrate the comments.
 
 			# Encryption method for the BEINC server
 			# Possible values:
-			# "auto" - Let Twisted decide (use the newest possible method)
+			# "" or "auto" - Let Twisted decide (use the newest possible method)
 			# "SSLv3" - SSLv3 (weak)
 			# "TLSv1" - TLSv1.0
 			# "TLSv1_1" - TLSv1.1
@@ -98,16 +98,17 @@ documentation to better illustrate the comments.
         "targets": [
             {
                 # Unique name for the defined target
-                # Default: 4 characters random string
-                # Defining your own name will make life easier for you
+                # Default: "" (making the target useless)
+                # The name should match the name of the server instance you
+                # want to connect to
                 "name": "weechat_main",
                 
                 # Target URL.
-                # Default: None (making the target useless)
+                # Default: "" (making the target useless)
                 "target_url": "https://10.0.0.2:9998",
 
                 # Password corresponding to the target BEINC instance
-                # Default: None
+                # Default: ""
                 "target_password": "beincpasswd",
 
                 # The filename of the SSL certificate authority (CA) used to 
@@ -118,11 +119,11 @@ documentation to better illustrate the comments.
                 "target_cert_file": "",
 
 				# A list of preferred ciphers for this target
-				# Default: "" (use the OpenSSL default ciphers)
+				# Default: "auto" or "" (use the OpenSSL default ciphers)
 				"ssl_ciphers": "ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
 
 				# Don't check whether the target's hostname matches the server's
-				# certificate. (Only Python >= 2.7.9)
+				# certificate. (Only for Python >= 2.7.9)
 				# Default: 0
 				"disable-hostname-check": 0,
 
@@ -168,9 +169,9 @@ documentation to better illustrate the comments.
 
                 # Channel list
                 # Default: [] (empty)
-                "channel_list": ["RedpillLinpro.#python",
+                "channel_list": ["Freenode.#python",
                                  "Exile.#test",
-                                 "RedpillLinpro.#adult",
+                                 "Freenode.#gentoo",
                                  "Exile.#pichove"],
 
                 # Nick list

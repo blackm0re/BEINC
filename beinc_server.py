@@ -59,6 +59,8 @@ BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 BEINC_OSD_TYPE_PYOSD = 2
 
+BEINC_CURRENT_CONFIG_VERSION = 2
+
 BEINC_SSL_METHODS = {'SSLv3': OpenSSL.SSL.SSLv3_METHOD,
                      'TLSv1': OpenSSL.SSL.TLSv1_METHOD}
 try:
@@ -351,11 +353,15 @@ def main():
                                                              e))
         sys.exit(errno.EIO)
     try:
-        if config_dict.get('config_version') != 2:
+        if config_dict.get('config_version') != BEINC_CURRENT_CONFIG_VERSION:
             sys.stderr.write(
-                'Incompatible or missing config-file version for {0}\n'.format(
-                    args.config_file))
-            sys.exit(1)
+                'WARNING: The version of the config-file: {0} ({1}) '
+                'does not correspond to the latest version supported '
+                'by this program ({2})\nCheck beinc_config_sample.json '
+                'for the newest features!\n'.format(
+                    args.config_file,
+                    config_dict.get('config_version', 'Not set'),
+                    BEINC_CURRENT_CONFIG_VERSION))
         ssl_certificate = config_dict['server']['general'].get(
             'ssl_certificate')
         ssl_private_key = config_dict['server']['general'].get(

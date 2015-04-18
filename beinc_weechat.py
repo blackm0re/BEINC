@@ -120,11 +120,15 @@ class WeechatTarget(object):
         """
         target_dict: the config-dictionary node that represents this instance
         """
-        self.__name = target_dict.get(
-            'name',
-            ''.join([chr(random.randrange(97, 123)) for x in range(4)]))
-        self.__url = target_dict.get('target_url')
-        self.__password = target_dict.get('target_password')
+        self.__name = target_dict.get('name', '')
+        if self.__name == '':
+            beinc_prnt('WARNING: Adding a target with no name '
+                       'will make the target useless')
+        self.__url = target_dict.get('target_url', '')
+        if self.__url == '':
+            beinc_prnt('WARNING: Adding a target with no URL '
+                       'will make the target useless')            
+        self.__password = target_dict.get('target_password', '')
         self.__pm_title_template = target_dict.get('pm_title_template',
                                                    '%s @ %S')
         self.__pm_message_template = target_dict.get('pm_message_template',
@@ -158,6 +162,7 @@ class WeechatTarget(object):
         self.__disable_hostname_check = bool(
             target_dict.get('disable-hostname-check', False))
         self.__ssl_version = target_dict.get('ssl_version', 'auto')
+        self.__last_message = None  # datetime.datetime instance
         self.__connection = None  # xmlrpclib.ServerProxy instance
         self.__connection_setup()
 
@@ -227,11 +232,14 @@ class WeechatTarget(object):
     def __repr__(self):
         """
         """
+        last_message = 'never'
+        if self.__last_message is not None:
+            last_message = self.__last_message.strftime('%Y-%m-%d %H:%M:%S')
         return ('name: {0}\nurl: {1}\nenabled: {2}\nchannel_list: {3}\n'
                 'nick_list: {4}\nchannel_messages_policy: {5}\n'
                 'private_messages_policy: {6}\nnotifications_policy: {7}\n'
-                'connected: {8}\nsocket timeout: {9}\nssl-version: {10}\n'
-                'ciphers: {11}\ndisable_hostname_check: {12}\n'
+                'last message: {8}\nsocket timeout: {9}\nssl-version: {10}\n'
+                'ciphers: {11}\ndisable hostname check: {12}\n'
                 'debug: {13}\n\n'.format(
                     self.__name,
                     self.__url,
@@ -241,11 +249,11 @@ class WeechatTarget(object):
                     self.__chan_messages_policy,
                     self.__priv_messages_policy,
                     self.__notifications_policy,
-                    'no' if self.__connection is None else 'yes',
+                    last_message,
                     self.__socket_timeout,
                     self.__ssl_version,
-                    self.__ssl_ciphers or 'default',
-                    'yes' if self.__disable_hostname_check else 'no'
+                    self.__ssl_ciphers or 'auto',
+                    'yes' if self.__disable_hostname_check else 'no',
                     'yes' if self.__debug else 'no'))
 
     def send_private_message_notification(self, values):
@@ -357,7 +365,7 @@ class WeechatTarget(object):
                         self.__cert_file))
                     context.check_hostname = bool(
                         not self.__disable_hostname_check)
-                if self.__ssl_ciphers:
+                if self.__ssl_ciphers and self.__ssl_ciphers != 'auto':
                     context.set_ciphers(self.__ssl_ciphers)
                 transport = xmlrpclib.SafeTransport(context=context)
             else:
@@ -368,7 +376,7 @@ class WeechatTarget(object):
                     ssl_options['ca_certs'] = os.path.expanduser(
                         self.__cert_file)
                     ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-                if self.__ssl_ciphers:
+                if self.__ssl_ciphers and self.__ssl_ciphers != 'auto':
                     ssl_options['ciphers'] = self.__ssl_ciphers
                 transport = BEINCCustomSafeTransport(
                     custom_ssl_options=ssl_options)
@@ -432,6 +440,7 @@ class WeechatTarget(object):
                                             message)
             if self.__debug:
                 beinc_prnt('BEINC DEBUG: Server responded: {0}'.format(result))
+            self.__last_message = datetime.datetime.now()
             return True
         except xmlrpclib.Fault as fault:
             if self.__debug:

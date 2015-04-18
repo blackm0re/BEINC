@@ -9,16 +9,16 @@ Installing the dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-Gentoo GNU/Linux 2013, 2014
+Gentoo GNU/Linux 2014, 2015
 ..........................
 
-# emerge -va dev-python/pyopenssl dev-python/cherrypy dev-python/notify-python dev-python/pyosd 
+# emerge -va dev-python/pyopenssl dev-python/twisted-web dev-python/notify-python dev-python/pyosd 
 
 
 Ubuntu GNU/Linux
 ................
 
-# apt-get install python-openssl python-cherrypy python-notify2 python-pyosd 
+# apt-get install python-openssl python-twisted-web python-notify2 python-pyosd 
 
 
 FreeBSD 9, 10
@@ -27,7 +27,7 @@ FreeBSD 9, 10
 # cd /usr/ports/security/py-openssl
 # make install clean
 
-# cd /usr/ports/www/py-cherrypy
+# cd /usr/ports/www/py-twistedWeb
 # make install clean
 
 # cd /usr/ports/devel/py-notify
@@ -45,7 +45,7 @@ This is where virtualenv may become handy (provided that it has been installed):
 $ virtualenv beinc_installation
 $ cd beinc_installation
 $ source bin/activate
-$ pip install cherrypy
+$ pip install Twisted
 $ pip install pyopenssl
 $ cd beinc-<version>
 $ ./beinc_server.py -h
@@ -71,13 +71,14 @@ Create a configuration file based on beinc_config_sample.json, defining your ins
 Start the BEINC server:
 $ ./beinc_server.py -H 10.0.0.44 -p 9678
 The example loads the server listening on 10.0.0.44, port 9678 using the default
-~/.beinc_server.json as a configuration file and usually gives you the cherrypy console
+~/.beinc_server.json as a configuration file and usually gives you the Twisted
+log console
 
 beinc_poller.py:
 $ ./beinc_poller.py -h
 The example lists all available command options
-$ ./beinc_poller.py -t 10 -f 7 --cert-file /home/sgs/weechat_cert.crt \
-  -P /home/sgs/.weechat_beinc_passwd https://10.0.0.44:9678/pull/weechat
+$ ./beinc_poller.py -n weechat -t 10 -f 7 --cert-file /home/sgs/weechat_cert.crt \
+  -p /home/sgs/.weechat_beinc_passwd https://10.0.0.44:9678
 Starts polling from the instance (target) defined above,
 defining an OSD timeout of 10 seconds, polling frequency of 7 seconds,
 checking whether the server's SSL certificate was signed (issued) by /home/sgs/weechat_cert.crt,

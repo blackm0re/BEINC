@@ -1,23 +1,35 @@
 {
     "server": {
         "general": {
-            "ssl_private_key": "key.pem",
-            "ssl_certificate": "cert.crt",
-			"ssl_acceptable_ciphers": "auto",
-			"ssl_version": "auto"
+            "ssl_private_key": "/home/user/.key.pem",
+            "ssl_certificate": "/home/user/.cert.pem",
+			"ssl_version": "TLSv1_2",
+			"ssl_ciphers": "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384"
         },
         "instances": [
             {
-                "name": "test",
+                "name": "instance1",
+                "password": "changeme",
+                "osd_system": "pynotify",
+                "osd_timeout": 5
+            },
+            {
+                "name": "instance2",
                 "password": "changeme",
                 "osd_system": "pyosd",
-                "osd_timeout": 5,
-                "pyosd_font": "",
+                "osd_timeout": 6,
+                "pyosd_font": "-adobe-courier-bold-o-normal--24-240-75-75-m-150-iso8859-1",
                 "pyosd_vertical_offset": 120,
                 "pyosd_horizontal_offset": 30,
                 "pyosd_align": "left",
-                "pyosd_position": "bottom",
-                "pyosd_color": "blue",
+                "pyosd_position": "top",
+                "pyosd_color": "blue"
+            },
+            {
+                "name": "instance3",
+                "password": "changeme",
+                "osd_system": "none",
+                "osd_timeout": 5,
                 "queue_size": 4
             }
         ]
@@ -29,26 +41,28 @@
                 "name": "weechat_main",
                 "target_url": "https://10.0.0.2:9898",
                 "target_password": "changeme",
-                "target_cert_file": "",
+                "target_cert_file": "/home/user/.ca_cert.pem",
                 "target_timestamp_format": "%H:%M:%S",
-                "socket_timeout": 30,
+                "ssl_version": "TLSv1_2",
+                "ssl_ciphers": "auto",
+                "disable-hostname-check": 0,
+                "socket_timeout": 2,
                 "pm_title_template": "%s @ %S",
                 "pm_message_template": "%m",
                 "cm_title_template": "%c @ %S",
                 "cm_message_template": "%s -> %m",
                 "nm_title_template": "%c @ %S",
                 "nm_message_template": "%s -> %m",
-                "channel_list": ["RedpillLinpro.#python",
+                "channel_list": ["Freenode.#python",
                                  "Exile.#test",
-                                 "RedpillLinpro.#adult",
+                                 "Freenode.#gentoo",
                                  "Exile.#pichove"],
                 "nick_list": ["Exile.Blackmore"],
                 "channel_messages_policy": 2,
                 "private_messages_policy": 1,
                 "notifications_policy": 1,
-                "debug": 1,
-                "enabled": 1,
-                "socket_timeout": 3
+                "debug": 0,
+                "enabled": 1
             }
         ]
     },
