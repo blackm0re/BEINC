@@ -3,7 +3,7 @@ v2.0:
     - use XMLRPC instead of HTTP POST for a cleaner and more robust API
     - several ssl options like ssl_version and ssl_ciphers added
     - bugfixes
-	
+
 v1.1:
     - when beinc_poller.py fetches several messages from a queue it won't let the last one to completely overwrite the previous ones
 

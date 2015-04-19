@@ -21,7 +21,6 @@ import datetime
 import httplib
 import json
 import os
-import random
 import socket
 import ssl
 import sys
@@ -61,6 +60,7 @@ class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
     allows the server certificate to be validated against CA
     This functionality lacks in Python < 2.7.9
     """
+
     default_port = httplib.HTTPS_PORT
 
     def __init__(self, host, port=None, key_file=None, cert_file=None,
@@ -86,6 +86,9 @@ class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
 
 
 class BEINCCustomSafeTransport(xmlrpclib.Transport):
+    """
+    Provides an alternative HTTPS transport for clients running on Python<2.7.9
+    """
 
     def __init__(self, use_datetime=0, custom_ssl_options={}):
         xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
@@ -122,12 +125,10 @@ class WeechatTarget(object):
         """
         self.__name = target_dict.get('name', '')
         if self.__name == '':
-            beinc_prnt('WARNING: Adding a target with no name '
-                       'will make the target useless')
+            raise Exception('"name" not defined for target')
         self.__url = target_dict.get('target_url', '')
         if self.__url == '':
-            beinc_prnt('WARNING: Adding a target with no URL '
-                       'will make the target useless')            
+            raise Exception('"target_url" not defined for target')
         self.__password = target_dict.get('target_password', '')
         self.__pm_title_template = target_dict.get('pm_title_template',
                                                    '%s @ %S')
@@ -723,8 +724,10 @@ if int(version) < 0x00040000:
     weechat.prnt('', 'WeeChat version >= 0.4.0 is required to run beinc')
 else:
     weechat.hook_command('beinc',
-                         'beinc on off toggle', '<on | off | reload>',
-                         'description...',
+                         'BEINC command', ('< broadcast <message> | on | off |'
+                                           ' reload | target <action> >'),
+                         ('Available target actions:\n'
+                          'disable <target name>\nenable <target name>\nlist'),
                          'None',
                          'beinc_command',
                          '')

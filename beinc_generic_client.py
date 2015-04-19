@@ -76,6 +76,9 @@ class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
 
 
 class BEINCCustomSafeTransport(xmlrpclib.Transport):
+    """
+    Provides an alternative HTTPS transport for clients running on Python<2.7.9
+    """
 
     def __init__(self, use_datetime=0, custom_ssl_options={}):
         xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)

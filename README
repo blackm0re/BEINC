@@ -6,8 +6,8 @@ What is BEINC?
 --------------
 
 Blackmore's Enchanced IRC Notification Collection (BEINC) is a free set of
-components that aim to provide a complete system for different on-screen-display
-notification scenarios.
+components that aims to provide a complete system for different
+on-screen-display notification scenarios.
 
 The current version of BEINC contains the following components:
 beinc_server.py - server used for queueing or providing on-screen-display (OSD)
@@ -19,7 +19,7 @@ beinc_generic_client.py - a simple client used to push notification messages
                           to beinc_server.py
                           Its main purpose is to provide a convenient way to 
                           test beinc_server.py (and beinc_poller.py) as well as
-                          to serve as an example on how to develop BEINC-clients
+                          to serve as an example for how to develop BEINC-clients
 + documentation and a sample configuration file (beinc_config_sample.json)
 
 
@@ -93,7 +93,9 @@ All components tested on: Gentoo GNU/Linux 2014,2015,
 
 
 Requirements:
-All components: Python 2.7.* (for TLS1.1 and TLS1.2 client support you ned Python>=2.7.9)
+All components: Python 2.7.*
+N.B. For TLS1.1 and TLS1.2 client support you need Python>=2.7.9
+
 beinc_server.py: Twisted Web >= 14.0, pyopenssl >= 0.13.0,
                  pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
 beinc_weechat.py: Weechat >= 0.4.0

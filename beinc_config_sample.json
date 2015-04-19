@@ -38,7 +38,7 @@
         "use_current_buffer": 0,
         "targets": [
             {
-                "name": "weechat_main",
+                "name": "instance1",
                 "target_url": "https://10.0.0.2:9898",
                 "target_password": "changeme",
                 "target_cert_file": "/home/user/.ca_cert.pem",
