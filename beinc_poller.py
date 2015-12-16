@@ -52,8 +52,7 @@ __version__ = '2.0'
 __license__ = 'GPL3'
 
 
-BEINC_SSL_METHODS = {'SSLv3': ssl.PROTOCOL_SSLv3,
-                     'TLSv1': ssl.PROTOCOL_TLSv1}
+BEINC_SSL_METHODS = {'TLSv1': ssl.PROTOCOL_TLSv1}
 try:
     BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
     BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
