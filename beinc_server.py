@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
-# Copyright (C) 2013-2015 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
+# Copyright (C) 2013-2017 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,19 +19,18 @@
 
 
 import argparse
+import cgi
 import errno
 import getpass
+import http.server
 import json
+import logging
 import os
+import ssl
 import sys
 
-import OpenSSL
-
 from functools import wraps
-
-from twisted.web import xmlrpc, server
-from twisted.internet import protocol, reactor, ssl
-from twisted.python import filepath, log
+from logging.config import fileConfig
 
 try:
     import pynotify
@@ -51,7 +50,7 @@ except ImportError as e:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '2.0'
+__version__ = '3.0'
 __license__ = 'GPL3'
 
 
@@ -59,19 +58,44 @@ BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 BEINC_OSD_TYPE_PYOSD = 2
 
-BEINC_CURRENT_CONFIG_VERSION = 2
+BEINC_CURRENT_CONFIG_VERSION = 3
 
-BEINC_SSL_METHODS = {'SSLv3': OpenSSL.SSL.SSLv3_METHOD,
-                     'TLSv1': OpenSSL.SSL.TLSv1_METHOD}
-try:
-    errstr = ("Warning: Current Twisted / "
-              "OpenSSL version doesn't support TLSv1.1")
-    BEINC_SSL_METHODS.update({'TLSv1_1': OpenSSL.SSL.TLSv1_1_METHOD})
-    errstr = ("Warning: Current Twisted / " +
-              "OpenSSL version doesn't support TLSv1.2")
-    BEINC_SSL_METHODS.update({'TLSv1_2': OpenSSL.SSL.TLSv1_2_METHOD})
-except:
-    sys.stderr.write(errstr + '\n')
+
+class BEINCError401(Exception):
+    pass
+
+
+class BEINCError403(Exception):
+    pass
+
+
+class BEINCError404(Exception):
+    pass
+
+
+class BEINCError405(Exception):
+    pass
+
+
+def beinc_login_required(method):
+    """
+    Decorator for checking login credentials
+    """
+
+    @wraps(method)
+    def wrapper(self, data, *args, **kwargs):
+        if data.get('resource_name') is None:
+            raise BEINCError403('Resource-name missing')
+        if data.get('password') is None:
+            raise BEINCError401('Password missing')
+        try:
+            instance = self.server.instances[data.get('resource_name')]
+        except Exception as e:
+            raise BEINCError401('Wrong instance or password')
+        if not instance.password_match(data.get('password')):
+            raise BEINCError401('Wrong instance or password')
+        return method(self, data, *args, **kwargs)
+    return wrapper
 
 
 class BEINCInstance(object):
@@ -190,7 +214,7 @@ class BEINCInstance(object):
 
     def get_queue(self):
         """
-        Reruens a json representation of the message queue
+        Returns a list of dict representation of the message queue
         """
         r_value = self.__message_queue
         self.__message_queue = list()
@@ -219,34 +243,112 @@ class BEINCInstance(object):
         self.__message_queue.append({'title': title, 'message': message})
 
 
-def beinc_login_required(method):
+class BEINCCustomHandler(http.server.BaseHTTPRequestHandler):
     """
-    Decorator for checking login credentials
     """
-
-    @wraps(method)
-    def wrapper(self, resource_name, password, *args, **kwargs):
+    def do_POST(self):
+        """
+        Handle POST requests
+        """
+        if self.path.strip('/') not in ('beinc/push', 'beinc/pull'):
+            self.__generate_json_error(404, 'Invalid resource path')
+            return
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={'REQUEST_METHOD': 'POST',
+                     'CONTENT_TYPE': self.headers['Content-Type']})
+        # extract all known fields
+        POST_data = dict(
+            resource_name=form.getvalue('resource_name'),
+            password=form.getvalue('password'),
+            title=form.getvalue('title', ''),
+            message=form.getvalue('message', ''))
         try:
-            instance = self.instances[resource_name]
+            result = {}
+            if self.path.strip('/') == 'beinc/push':
+                result = self.__handle_push(POST_data)
+            elif self.path.strip('/') == 'beinc/pull':
+                result = self.__handle_pull(POST_data)
+            self.__render_to_JSON_response(result)
+        except BEINCError401 as e:
+            self.__generate_json_error(401, str(e))
+        except BEINCError403 as e:
+            self.__generate_json_error(403, str(e))
+        except BEINCError404 as e:
+            self.__generate_json_error(404, str(e))
+        except BEINCError405 as e:
+            self.__generate_json_error(405, str(e))
         except Exception as e:
-            raise xmlrpc.Fault(401,
-                               'Wrong instance or password')
-        if not instance.password_match(password):
-            raise xmlrpc.Fault(401,
-                               'Wrong instance or password')
-        return method(self, resource_name, password, *args, **kwargs)
-    return wrapper
+            self.__generate_json_error(500,
+                                       'Unexpected error: {}'.format(str(e)))
 
+    def do_GET(self):
+        """
+        Handle GET Requests
+        """
+        self.__generate_json_error(405, 'Unsupported method')
 
-class XMLRPCNotifyServer(xmlrpc.XMLRPC):
-    """
-    A class representing the entire server
-    """
-
-    def __init__(self, config):
+    @beinc_login_required
+    def __handle_push(self, data):
         """
         """
-        xmlrpc.XMLRPC.__init__(self)
+        instance = self.server.instances[data.get('resource_name')]
+        try:
+            instance.send_message(data.get('title'), data.get('message'))
+            return {'message': 'OK. Sent.'}
+        except Exception as e:
+            self.__generate_json_error(500, str(e))
+
+    @beinc_login_required
+    def __handle_pull(self, data):
+        """
+        """
+        return {}
+
+    def __generate_json_error(self, code, message):
+        """
+        Generates response header and json content for errors
+
+        Keyword Arguments:
+        :param code: the HTTP code
+        :type code: int
+
+        :param message: the return message set in the .json response
+        :type message: str
+        """
+        self.send_response(code)
+        self.send_header('Content-type', 'application/json; charset=utf-8')
+        self.end_headers()
+        msg = {'code': code, 'message': message, 'data': {}}
+        self.wfile.write(json.dumps(msg,
+                                    sort_keys=True,
+                                    indent=4).encode('utf-8'))
+
+    def __render_to_JSON_response(self, context):
+        """
+        Keyword Arguments:
+        :param context: the context-dict to be converted to json
+        :type context: dict
+        """
+        response = {'code': 200, 'message': 'OK', 'data': {}}
+        response.update(context)
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(json.dumps(response,
+                                    sort_keys=True,
+                                    indent=4).encode('utf-8'))
+
+
+class BEINCNotifyServer(http.server.HTTPServer):
+    """
+    """
+    def set_config(self, config):
+        """
+        Sets the configuration dict for the server, instantiates
+        the BEINC instances and initiates the defined OSD backends
+        """
         self.__config = config
         self.__instances = dict()
         # initialize pynotify if the module exists and if needed
@@ -262,7 +364,7 @@ class XMLRPCNotifyServer(xmlrpc.XMLRPC):
         try:
             for instance in self.__config['server']['instances']:
                 self.__instances[instance['name']] = BEINCInstance(instance)
-                print('Instance "{0}" added'.format(instance['name']))
+                logger.info('Instance "{0}" added'.format(instance['name']))
         except Exception as e:
             sys.stderr.write('Unable to create instance "{0}": {1}\n'.format(
                 instance['name'],
@@ -276,39 +378,8 @@ class XMLRPCNotifyServer(xmlrpc.XMLRPC):
         """
         return self.__instances
 
-    @beinc_login_required
-    def xmlrpc_push(self, resource_name, password, title, message):
-        """
-        Return all passed args.
-        """
-        instance = self.__instances[resource_name]
-        try:
-            instance.send_message(title, message)
-            return 'OK'
-        except Exception as e:
-            sys.stderr.write(
-                'Unable to handle message in {0}: ({1})\n'.format(
-                    instance.name,
-                    e))
-            raise xmlrpc.Fault(500, 'Unable to send message')
 
-    @beinc_login_required
-    def xmlrpc_pull(self, resource_name, password):
-        """
-        Return sum of arguments.
-        """
-        instance = self.__instances[resource_name]
-        if not instance.queueable:
-            raise xmlrpc.Fault(
-                405,
-                'BEINC instance "{0}" does not support queuing'.format(
-                    instance.name))
-        return instance.get_queue()
-
-
-def main():
-    """
-    """
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='The following options are available')
     parser.add_argument(
@@ -324,6 +395,21 @@ def main():
         dest='hostname',
         default='127.0.0.1',
         help='BEINC server IP / hostname (default: 127.0.0.1)')
+    parser.add_argument(
+        '-L', '--logger-name',
+        metavar='NAME',
+        type=str,
+        dest='logger_name',
+        default='',
+        help="BEINC logger name (default: 'beinc')")
+    parser.add_argument(
+        '-l', '--logger-config',
+        metavar='CONFIG',
+        type=str,
+        dest='logger_config',
+        default=os.path.expanduser('~/.beinc_server_logger.ini'),
+        help=('BEINC logger config (.ini) '
+              '(default: ~/.beinc_server_logger.ini)'))
     parser.add_argument(
         '-p', '--port',
         metavar='PORT',
@@ -344,7 +430,6 @@ def main():
         version='%(prog)s {0}'.format(__version__),
         help='Display program-version and exit')
     args = parser.parse_args()
-    log.startLogging(sys.stdout)
     try:
         with open(args.config_file, 'r') as fp:
             config_dict = json.load(fp)
@@ -353,6 +438,15 @@ def main():
                                                              e))
         sys.exit(errno.EIO)
     try:
+        if os.path.isfile(args.logger_config):
+            fileConfig(args.logger_config)
+            logger = logging.getLogger(args.logger_name)
+        else:
+            logging.basicConfig(
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                level=logging.DEBUG)
+            logger = logging.getLogger('beinc')
+        logger.info('BEINC starting. Loading config...')
         if config_dict.get('config_version') != BEINC_CURRENT_CONFIG_VERSION:
             sys.stderr.write(
                 'WARNING: The version of the config-file: {0} ({1}) '
@@ -366,39 +460,22 @@ def main():
             'ssl_certificate')
         ssl_private_key = config_dict['server']['general'].get(
             'ssl_private_key')
-        ssl_method_str = config_dict['server']['general'].get(
-            'ssl_version', 'auto')
         ssl_acceptable_ciphers_str = config_dict['server']['general'].get(
-            'ssl_ciphers', 'auto')
-        beinc_server = XMLRPCNotifyServer(config_dict)
+            'ssl_ciphers')
+        beinc_server = BEINCNotifyServer((args.hostname, args.port),
+                                         BEINCCustomHandler)
+        beinc_server.set_config(config_dict)
         if ssl_certificate and ssl_private_key:
-            # SSL connection
-            cert_path = filepath.FilePath(ssl_certificate)
-            key_path = filepath.FilePath(ssl_private_key)
-            private_certificate = ssl.PrivateCertificate.loadPEM(
-                key_path.getContent() + cert_path.getContent())
-            options = private_certificate.options()
-            ssl_method = BEINC_SSL_METHODS.get(ssl_method_str)
-            if ssl_method:
-                options.method = ssl_method
-            if ssl_acceptable_ciphers_str.lower() != 'auto':
-                options.acceptableCiphers = (
-                    ssl.AcceptableCiphers.fromOpenSSLCipherString(
-                        ssl_acceptable_ciphers_str))
-            reactor.listenSSL(args.port,
-                              server.Site(beinc_server),
-                              options,
-                              interface=args.hostname)
-        else:
-            reactor.listenTCP(args.port,
-                              server.Site(beinc_server),
-                              interface=args.hostname)
-        reactor.run()
+            beinc_server.socket = ssl.wrap_socket(
+                beinc_server.socket,
+                keyfile=ssl_private_key,
+                certfile=ssl_certificate,
+                server_side=True,
+                ssl_version=ssl.PROTOCOL_TLSv1_2,
+                ciphers=ssl_acceptable_ciphers_str)
+        logger.info('Done!')
+        beinc_server.serve_forever()
     except Exception as e:
-        sys.stderr.write('WebServer error: {0}\n'.format(e))
+        sys.stderr.write('BEINCServer critical error: {0}\n'.format(e))
         sys.exit(1)
     sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()
