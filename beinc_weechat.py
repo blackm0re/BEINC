@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
-# Copyright (C) 2013-2015 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
+# Copyright (C) 2013-2017 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,19 +18,21 @@
 
 
 import datetime
-import httplib
 import json
 import os
 import socket
 import ssl
 import sys
-import xmlrpclib
+
+from urllib import urlencode
+from urllib2 import urlopen
+
 
 import weechat
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '2.0'
+__version__ = '3.0'
 __license__ = 'GPL3'
 
 
@@ -42,74 +44,6 @@ BEINC_POLICY_NONE = 0
 BEINC_POLICY_ALL = 1
 BEINC_POLICY_LIST_ONLY = 2
 BEINC_CURRENT_CONFIG_VERSION = 2
-
-BEINC_SSL_METHODS = {'TLSv1': ssl.PROTOCOL_TLSv1}
-try:
-    BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
-    BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
-except:
-    pass
-
-
-class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
-    """
-    This class allows communication via SSL.
-
-    It is a reimplementation of httplib.HTTPSConnection and
-    allows the server certificate to be validated against CA
-    This functionality lacks in Python < 2.7.9
-    """
-
-    default_port = httplib.HTTPS_PORT
-
-    def __init__(self, host, port=None, key_file=None, cert_file=None,
-                 strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                 source_address=None, custom_ssl_options={}):
-        httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
-                                        source_address)
-        self.key_file = key_file
-        self.cert_file = cert_file
-        self.custom_ssl_options = custom_ssl_options
-
-    def connect(self):
-        "Connect to a host on a given (SSL) port."
-        sock = socket.create_connection((self.host, self.port),
-                                        self.timeout, self.source_address)
-        if self._tunnel_host:
-            self.sock = sock
-            self._tunnel()
-        self.sock = ssl.wrap_socket(sock,
-                                    self.key_file,
-                                    self.cert_file,
-                                    **self.custom_ssl_options)
-
-
-class BEINCCustomSafeTransport(xmlrpclib.Transport):
-    """
-    Provides an alternative HTTPS transport for clients running on Python<2.7.9
-    """
-
-    def __init__(self, use_datetime=0, custom_ssl_options={}):
-        xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
-        self.custom_ssl_options = custom_ssl_options
-
-    def make_connection(self, host):
-        if self._connection and host == self._connection[0]:
-            return self._connection[1]
-        try:
-            HTTPS = BEINCCustomHTTPSConnection
-        except AttributeError:
-            raise NotImplementedError(
-                "your version of httplib doesn't support HTTPS"
-            )
-        else:
-            chost, self._extra_headers, x509 = self.get_host_info(host)
-            self._connection = host, HTTPS(
-                chost,
-                None,
-                custom_ssl_options=self.custom_ssl_options,
-                **(x509 or {}))
-            return self._connection[1]
 
 
 class WeechatTarget(object):
@@ -163,8 +97,8 @@ class WeechatTarget(object):
             target_dict.get('disable-hostname-check', False))
         self.__ssl_version = target_dict.get('ssl_version', 'auto')
         self.__last_message = None  # datetime.datetime instance
-        self.__connection = None  # xmlrpclib.ServerProxy instance
-        self.__connection_setup()
+        self.__context = None
+        self.__context_setup()
 
     @property
     def name(self):
@@ -221,13 +155,6 @@ class WeechatTarget(object):
         The target's enabled status (bool property)
         """
         self.__enabled = value
-
-    @property
-    def connected(self):
-        """
-        The target's connection status (read-only property)
-        """
-        return bool(self.__connection)
 
     def __repr__(self):
         """
@@ -343,64 +270,32 @@ class WeechatTarget(object):
                     'BEINC DEBUG: send_broadcast_notification-ERROR '
                     'for "{0}": {1}'.format(self.__name, e))
 
-    def __connection_setup(self):
+    def __context_setup(self):
         """
         """
-        if self.__connection is not None:
+        if self.__context is not None:
             return True
-        if self.__debug:
-            beinc_prnt(
-                'BEINC DEBUG: Establishing proxy-connection to: {0}'.format(
-                    self.__url))
         try:
-            ssl_version = BEINC_SSL_METHODS.get(self.__ssl_version,
-                                                ssl.PROTOCOL_SSLv23)
-            if sys.hexversion >= 0x20709f0:
-                # Python >= 2.7.9
-                context = ssl.SSLContext(ssl_version)
-                context.verify_mode = ssl.CERT_NONE
-                if self.__cert_file:
-                    context.verify_mode = ssl.CERT_REQUIRED
-                    context.load_verify_locations(os.path.expanduser(
-                        self.__cert_file))
-                    context.check_hostname = bool(
-                        not self.__disable_hostname_check)
-                if self.__ssl_ciphers and self.__ssl_ciphers != 'auto':
-                    context.set_ciphers(self.__ssl_ciphers)
-                transport = xmlrpclib.SafeTransport(context=context)
-            else:
-                # Python < 2.7.9
-                ssl_options = {}
-                ssl_options['ssl_version'] = ssl_version
-                if self.__cert_file:
-                    ssl_options['ca_certs'] = os.path.expanduser(
-                        self.__cert_file)
-                    ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-                if self.__ssl_ciphers and self.__ssl_ciphers != 'auto':
-                    ssl_options['ciphers'] = self.__ssl_ciphers
-                transport = BEINCCustomSafeTransport(
-                    custom_ssl_options=ssl_options)
-            self.__connection = xmlrpclib.ServerProxy(self.__url,
-                                                      transport=transport)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            context.verify_mode = ssl.CERT_NONE
+            if self.__cert_file:
+                context.verify_mode = ssl.CERT_REQUIRED
+                context.load_verify_locations(cafile=os.path.expanduser(
+                    self.__cert_file))
+                context.check_hostname = bool(
+                    not self.__disable_hostname_check)
+            if self.__ssl_ciphers and self.__ssl_ciphers != 'auto':
+                context.set_ciphers(self.__ssl_ciphers)
+            self.__context = context
             return True
-        except xmlrpclib.Fault as fault:
-            if self.__debug:
-                beinc_prnt(
-                    'BEINC DEBUG: Server answered with '
-                    'errorCode={0}: {1}\n'.format(
-                        fault.faultCode,
-                        fault.faultString))
         except ssl.SSLError as e:
             if self.__debug:
                 beinc_prnt('BEINC DEBUG: SSL/TLS error: {0}\n'.format(e))
-        except socket.error as e:
-            if self.__debug:
-                beinc_prnt('BEINC DEBUG: Connection error: {0}\n'.format(e))
         except Exception as e:
             if self.__debug:
-                beinc_prnt('BEINC DEBUG: Generic client error: {0}\n'.format(
+                beinc_prnt('BEINC DEBUG: Generic context error: {0}\n'.format(
                     e))
-        self.__connection = None
+        self.__context = None
         return False
 
     def __fetch_formatted_str(self, template, values):
@@ -427,28 +322,30 @@ class WeechatTarget(object):
     def __send_beinc_message(self, title, message):
         """
         the function implements the BEINC "protocol" by generating a simple
-        XMLRPC request
+        POST request
         """
         try:
-            if self.__connection is None and not self.__connection_setup():
+            if self.__context is None and not self.__context_setup():
                 return False
-            if self.__socket_timeout:
-                socket.setdefaulttimeout(self.__socket_timeout)
-            result = self.__connection.push(self.__name,
-                                            self.__password,
-                                            title,
-                                            message)
+            response = urlopen(
+                self.__url,
+                data=urlencode(
+                    (
+                        ('resource_name', self.__name),
+                        ('password', self.__password),
+                        ('title', title),
+                        ('message', message)
+                        )),
+                timeout=self.__socket_timeout,
+                context=self.__context)
+            response_dict = json.loads(response.read())
+            if response.code != 200:
+                raise socket.error(response_dict.get('message', ''))
             if self.__debug:
-                beinc_prnt('BEINC DEBUG: Server responded: {0}'.format(result))
+                beinc_prnt('BEINC DEBUG: Server responded: {0}'.format(
+                    response_dict.get('message')))
             self.__last_message = datetime.datetime.now()
             return True
-        except xmlrpclib.Fault as fault:
-            if self.__debug:
-                beinc_prnt(
-                    'BEINC DEBUG: Server answered with '
-                    'errorCode={0}: {1}\n'.format(
-                        fault.faultCode,
-                        fault.faultString))
         except ssl.SSLError as e:
             if self.__debug:
                 beinc_prnt('BEINC DEBUG: SSL/TLS error: {0}\n'.format(e))
@@ -459,10 +356,6 @@ class WeechatTarget(object):
             if self.__debug:
                 beinc_prnt('BEINC DEBUG: Unable to send message: {0}\n'.format(
                     e))
-        finally:
-            if self.__socket_timeout:
-                socket.setdefaulttimeout(None)
-        self.__connection = None
         return False
 
 

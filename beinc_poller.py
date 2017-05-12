@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
@@ -21,13 +21,16 @@
 import argparse
 import errno
 import getpass
-import httplib
+import json
 import os
 import sched
 import socket
 import ssl
 import sys
 import time
+
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 try:
     import notify2 as pynotify
@@ -38,66 +41,6 @@ except ImportError as e:
 __author__ = 'Simeon Simeonov'
 __version__ = '3.0'
 __license__ = 'GPL3'
-
-
-class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
-    """
-    This class allows communication via SSL.
-
-    It is a reimplementation of httplib.HTTPSConnection and
-    allows the server certificate to be validated against CA
-    This functionality lacks in Python < 2.7.9
-    """
-    default_port = httplib.HTTPS_PORT
-
-    def __init__(self, host, port=None, key_file=None, cert_file=None,
-                 strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                 source_address=None, custom_ssl_options={}):
-        httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
-                                        source_address)
-        self.key_file = key_file
-        self.cert_file = cert_file
-        self.custom_ssl_options = custom_ssl_options
-
-    def connect(self):
-        "Connect to a host on a given (SSL) port."
-        sock = socket.create_connection((self.host, self.port),
-                                        self.timeout, self.source_address)
-        if self._tunnel_host:
-            self.sock = sock
-            self._tunnel()
-        self.sock = ssl.wrap_socket(sock,
-                                    self.key_file,
-                                    self.cert_file,
-                                    **self.custom_ssl_options)
-
-
-class BEINCCustomSafeTransport(xmlrpclib.Transport):
-    """
-    Provides an alternative HTTPS transport for clients running on Python<2.7.9
-    """
-
-    def __init__(self, use_datetime=0, custom_ssl_options={}):
-        xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
-        self.custom_ssl_options = custom_ssl_options
-
-    def make_connection(self, host):
-        if self._connection and host == self._connection[0]:
-            return self._connection[1]
-        try:
-            HTTPS = BEINCCustomHTTPSConnection
-        except AttributeError:
-            raise NotImplementedError(
-                "your version of httplib doesn't support HTTPS"
-            )
-        else:
-            chost, self._extra_headers, x509 = self.get_host_info(host)
-            self._connection = host, HTTPS(
-                chost,
-                None,
-                custom_ssl_options=self.custom_ssl_options,
-                **(x509 or {}))
-            return self._connection[1]
 
 
 def display_notification(args, title, message):
@@ -116,7 +59,8 @@ def display_notification(args, title, message):
                 'Terminating...\n')
         if not pynotify.init('BEINC Notify'):
             raise Exception('There was a problem with libnotify\n')
-        notification_obj = pynotify.Notification(' ')
+        notification_obj = pynotify.Notification(summary=title,
+                                                 message=message)
         notification_obj.timeout = 1000 * args.osd_timeout
         notification_obj.set_category('im.received')
         notification_obj.show()
@@ -133,46 +77,34 @@ def poll_notifications(scheduler, args):
     args: the argparse processed command-line arguments
     """
     try:
-        ssl_version = BEINC_SSL_METHODS.get(args.ssl_version,
-                                            ssl.PROTOCOL_SSLv23)
-        if sys.hexversion >= 0x20709f0:
-            # Python >= 2.7.9
-            context = ssl.SSLContext(ssl_version)
-            context.verify_mode = ssl.CERT_NONE
-            if args.cert:
-                context.verify_mode = ssl.CERT_REQUIRED
-                context.load_verify_locations(os.path.expanduser(args.cert))
-                context.check_hostname = bool(not args.disable_hostname_check)
-            if args.ciphers:
-                context.set_ciphers(args.ciphers)
-            transport = xmlrpclib.SafeTransport(context=context)
-        else:
-            # Python < 2.7.9
-            ssl_options = {}
-            ssl_options['ssl_version'] = ssl_version
-            if args.cert:
-                ssl_options['ca_certs'] = os.path.expanduser(args.cert)
-                ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-            if args.ciphers:
-                ssl_options['ciphers'] = args.ciphers
-            transport = BEINCCustomSafeTransport(
-                custom_ssl_options=ssl_options)
-        server = xmlrpclib.ServerProxy(args.url,
-                                       transport=transport)
-        res_list = server.pull(args.rname, args.password)
-        for entry in res_list:
-            title = entry.get('title', '')
-            message = entry.get('message', '')
-            display_notification(args, title, message)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        context.verify_mode = ssl.CERT_NONE
+        if args.cert:
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(cafile=os.path.expanduser(args.cert))
+            context.check_hostname = bool(not args.disable_hostname_check)
+        if args.ciphers:
+            context.set_ciphers(args.ciphers)
+        response = urlopen(
+            args.url,
+            data=urlencode(
+                (
+                    ('resource_name', args.rname),
+                    ('password', args.password)
+                )).encode('utf-8'),
+            timeout=args.socket_timeout,
+            context=context)
+        response_dict = json.loads(response.read().decode('utf-8'))
+        if response.code != 200:
+            raise socket.error(response_dict.get('message', ''))
+        for entry in response_dict['data']['messages']:
+            display_notification(args,
+                                 entry.get('title', ''),
+                                 entry.get('message', ''))
         scheduler.enter(args.frequency,
                         1,
                         poll_notifications,
                         (scheduler, args))
-    except xmlrpclib.Fault as fault:
-        sys.stderr.write(
-            'BEINC server answered with errorCode={0}: {1}\n'.format(
-                fault.faultCode,
-                fault.faultString))
     except ssl.SSLError as e:
         sys.stderr.write('BEINC SSL/TLS error: {0}\n'.format(e))
         sys.exit(errno.EPERM)
@@ -277,8 +209,6 @@ def main():
         except Exception as e:
             sys.stderr.write('Unable to open password file: {0}'.format(e))
             sys.exit(1)
-    if args.socket_timeout:
-        socket.setdefaulttimeout(args.socket_timeout)
     scheduler = sched.scheduler(time.time, time.sleep)
     scheduler.enter(args.frequency,
                     1,
