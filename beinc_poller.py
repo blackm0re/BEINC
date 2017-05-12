@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
-# Copyright (C) 2013-2015 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
+# Copyright (C) 2013-2017 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,43 +21,23 @@
 import argparse
 import errno
 import getpass
-import httplib  # for Python < 2.7.9
+import httplib
 import os
 import sched
 import socket
 import ssl
 import sys
 import time
-import xmlrpclib
 
 try:
-    import pynotify
+    import notify2 as pynotify
 except ImportError as e:
     pynotify = None
 
-try:
-    import pyosd
-    pyosd_positions = {'top': pyosd.POS_TOP,
-                       'middle': pyosd.POS_MID,
-                       'bottom': pyosd.POS_BOT}
-    pyosd_alignments = {'left': pyosd.ALIGN_LEFT,
-                        'center': pyosd.ALIGN_CENTER,
-                        'right': pyosd.ALIGN_RIGHT}
-except ImportError as e:
-    pyosd = None
-
 
 __author__ = 'Simeon Simeonov'
-__version__ = '2.0'
+__version__ = '3.0'
 __license__ = 'GPL3'
-
-
-BEINC_SSL_METHODS = {'TLSv1': ssl.PROTOCOL_TLSv1}
-try:
-    BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
-    BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
-except:
-    pass
 
 
 class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
@@ -128,26 +108,7 @@ def display_notification(args, title, message):
     title: notification title
     message: notification message
     """
-    if args.osd_sys == 'pyosd':
-        if not pyosd:
-            raise Exception(
-                'Could not load "pyosd".\n'
-                'Please install "pyosd" or use a different osd-system!\n'
-                'Terminating...\n')
-        notification_obj = pyosd.osd()
-        notification_obj.set_timeout(args.osd_timeout)
-        if args.font:
-            notification_obj.set_font(args.font)
-        notification_obj.set_vertical_offset(args.voffset)
-        notification_obj.set_horizontal_offset(args.hoffset)
-        notification_obj.set_align(
-            pyosd_alignments.get(args.alignment, pyosd.ALIGN_LEFT))
-        notification_obj.set_pos(
-            pyosd_positions.get(args.position, pyosd.POS_BOT))
-        notification_obj.set_colour(args.color)
-        notification_obj.display(title, line=0)
-        notification_obj.display(message, line=1)
-    elif args.osd_sys == 'pynotify':
+    if args.osd_sys == 'pynotify':
         if not pynotify:
             raise Exception(
                 'Could not load "pynotify".\n'
@@ -156,13 +117,8 @@ def display_notification(args, title, message):
         if not pynotify.init('BEINC Notify'):
             raise Exception('There was a problem with libnotify\n')
         notification_obj = pynotify.Notification(' ')
-        notification_obj.set_timeout(1000 * args.osd_timeout)
-        notification_obj.set_property(
-            'app_name',
-            '{0} {1}'.format(sys.argv[0], __version__))
-        notification_obj.set_properties(
-            summary=title,
-            body=message)
+        notification_obj.timeout = 1000 * args.osd_timeout
+        notification_obj.set_category('im.received')
         notification_obj.show()
     else:
         raise Exception(
@@ -237,20 +193,6 @@ def main():
         type=str,
         help='BEINC server destination URL')
     parser.add_argument(
-        '-a', '--align',
-        metavar='ALIGNMENT',
-        type=str,
-        dest='alignment',
-        default='left',
-        help='Alignment for "pyosd": "left" (default), "center", "right"')
-    parser.add_argument(
-        '-C', '--color',
-        metavar='COLOR',
-        type=str,
-        dest='color',
-        default='blue',
-        help='Color for "pyosd" (default: "blue")')
-    parser.add_argument(
         '-c', '--cert-file',
         metavar='FILE',
         type=str,
@@ -265,20 +207,12 @@ def main():
         dest='ciphers',
         default='',
         help='Preferred ciphers list (default: auto)')
-    if sys.hexversion >= 0x20709f0:
-        parser.add_argument(
-            '--disable-hostname-check',
-            action='store_true',
-            dest='disable_hostname_check',
-            default=False,
-            help='Do not check whether server cert matches server hostname')
     parser.add_argument(
-        '--font',
-        metavar='FONT',
-        type=str,
-        dest='font',
-        default=None,
-        help='Custom font for "pyosd" (default: pyosd default font)')
+        '--disable-hostname-check',
+        action='store_true',
+        dest='disable_hostname_check',
+        default=False,
+        help='Do not check whether server cert matches server hostname')
     parser.add_argument(
         '-f', '--frequency',
         metavar='SECONDS',
@@ -286,13 +220,6 @@ def main():
         dest='frequency',
         default=10,
         help='Polling frequency in seconds (default: 10)')
-    parser.add_argument(
-        '--h-offset',
-        metavar='OFFSET',
-        type=int,
-        dest='hoffset',
-        default=30,
-        help='Horizontal offset for "pyosd" (default: 30)')
     parser.add_argument(
         '-n', '--resource-name',
         metavar='NAME',
@@ -306,7 +233,7 @@ def main():
         type=str,
         dest='osd_sys',
         default='pynotify',
-        help='BEINC osd-system: "pynotify" (default), "pyosd"')
+        help='BEINC osd-system: "pynotify" (default)')
     parser.add_argument(
         '-p', '--password',
         metavar='PASSWORD[FILE]',
@@ -315,30 +242,6 @@ def main():
         default='',
         help='BEINC taget-password / text-file containing the target password'
         ' (default & recommended: prompt for passwd)')
-    parser.add_argument(
-        '-P', '--position',
-        metavar='POSITION',
-        type=str,
-        dest='position',
-        default='bottom',
-        help='Position for "pyosd": "top", "middle", "bottom" (default)')
-    if sys.hexversion >= 0x20709f0:
-        parser.add_argument(
-            '-s', '--ssl-version',
-            metavar='VERSION',
-            type=str,
-            dest='ssl_version',
-            default='auto',
-            help='Use SSL version: "auto" (default), '
-            '"SSLv3", "TLSv1", "TLSv1_1", "TLSv1_2"')
-    else:
-        parser.add_argument(
-            '-s', '--ssl-version',
-            metavar='VERSION',
-            type=str,
-            dest='ssl_version',
-            default='auto',
-            help='Use SSL version: "auto" (default), "SSLv3", "TLSv1"')
     parser.add_argument(
         '-T', '--socket-timeout',
         metavar='SECONDS',
@@ -358,13 +261,6 @@ def main():
         action='version',
         version='%(prog)s {0}'.format(__version__),
         help='display program-version and exit')
-    parser.add_argument(
-        '--v-offset',
-        metavar='OFFSET',
-        type=int,
-        dest='voffset',
-        default=120,
-        help='Vertical offset for "pyosd" (default: 120)')
     args = parser.parse_args()
     if not args.password:
         try:

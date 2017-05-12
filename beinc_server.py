@@ -33,20 +33,9 @@ from functools import wraps
 from logging.config import fileConfig
 
 try:
-    import pynotify
+    import notify2 as pynotify
 except ImportError as e:
     pynotify = None
-
-try:
-    import pyosd
-    pyosd_positions = {'top': pyosd.POS_TOP,
-                       'middle': pyosd.POS_MID,
-                       'bottom': pyosd.POS_BOT}
-    pyosd_alignments = {'left': pyosd.ALIGN_LEFT,
-                        'center': pyosd.ALIGN_CENTER,
-                        'right': pyosd.ALIGN_RIGHT}
-except ImportError as e:
-    pyosd = None
 
 
 __author__ = 'Simeon Simeonov'
@@ -56,7 +45,6 @@ __license__ = 'GPL3'
 
 BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
-BEINC_OSD_TYPE_PYOSD = 2
 
 BEINC_CURRENT_CONFIG_VERSION = 3
 
@@ -116,7 +104,7 @@ class BEINCInstance(object):
         self.__queue_size = int(instance_dict.get('queue_size', 3))
         if instance_dict['osd_system'].lower() == 'pynotify':
             self.__queue_size = 0  # disable queueing
-            if not pynotify:
+            if pynotify is None:
                 sys.stderr.write(
                     'This server does not possess pynotify capability\n')
                 sys.stderr.write(
@@ -127,11 +115,10 @@ class BEINCInstance(object):
                 sys.exit(errno.EPERM)
             try:
                 self.__osd_notification = pynotify.Notification(' ')
-                self.__osd_notification.set_timeout(
-                    1000 * int(instance_dict.get('osd_timeout', 5)))
-                self.__osd_notification.set_property(
-                    'app_name',
-                    '{0} {1}'.format(sys.argv[0], __version__))
+                self.__osd_notification.timeout = 1000 * int(instance_dict.get(
+                    'osd_timeout', 5))
+                self.__osd_notification.set_category('im.received')
+                self.__osd_type = BEINC_OSD_TYPE_PYNOTIFY
             except Exception as e:
                 sys.stderr.write(
                     'Unable to set up a '
@@ -139,45 +126,6 @@ class BEINCInstance(object):
                         self.__name,
                         e))
                 sys.exit(errno.EPERM)
-            self.__osd_type = BEINC_OSD_TYPE_PYNOTIFY
-        elif instance_dict['osd_system'].lower() == 'pyosd':
-            self.__queue_size = 0  # disable queueing
-            if not pyosd:
-                sys.stderr.write(
-                    'This server does not possess pyosd capability\n')
-                sys.stderr.write(
-                    'Remove the instance {0}'.format(self.__name))
-                sys.stderr.write(
-                    'or define it with "osd_system": "none" '
-                    'or other available backend\n')
-                sys.exit(errno.EPERM)
-            try:
-                self.__osd_notification = pyosd.osd()
-                self.__osd_notification.set_timeout(
-                    int(instance_dict.get('osd_timeout', 5)))
-                pyosd_font = instance_dict.get('pyosd_font')
-                if pyosd_font:
-                    self.__osd_notification.set_font(pyosd_font)
-                self.__osd_notification.set_vertical_offset(
-                    instance_dict.get('pyosd_vertical_offset', 120))
-                self.__osd_notification.set_horizontal_offset(
-                    instance_dict.get('pyosd_horizontal_offset', 30))
-                align_str = instance_dict.get('pyosd_align', 'left')
-                self.__osd_notification.set_align(
-                    pyosd_alignments.get(align_str, pyosd.ALIGN_LEFT))
-                position_str = instance_dict.get('pyosd_position', 'bottom')
-                self.__osd_notification.set_pos(
-                    pyosd_positions.get(position_str, pyosd.POS_BOT))
-                self.__osd_notification.set_colour(
-                    instance_dict.get('pyosd_color', 'blue'))
-            except Exception as e:
-                sys.stderr.write(
-                    'Unable to set up a pyosd '
-                    'notification object for "{0}" ({1})\n'.format(
-                        self.__name,
-                        e))
-                sys.exit(errno.EPERM)
-            self.__osd_type = BEINC_OSD_TYPE_PYOSD
 
     @property
     def name(self):
@@ -207,8 +155,6 @@ class BEINCInstance(object):
         """
         if self.__osd_type == BEINC_OSD_TYPE_PYNOTIFY:
             self.__send_pynotify_messaage(title, message)
-        elif self.__osd_type == BEINC_OSD_TYPE_PYOSD:
-            self.__send_pyosd_message(title, message)
         else:
             self.__send_message_to_queue(title, message)
 
@@ -224,15 +170,8 @@ class BEINCInstance(object):
         """
         Displays pynotify message
         """
-        self.__osd_notification.set_properties(summary=title, body=message)
+        self.__osd_notification.update(summary=title, message=message)
         self.__osd_notification.show()
-
-    def __send_pyosd_message(self, title, message):
-        """
-        Displays pyosd message
-        """
-        self.__osd_notification.display(title, line=0)
-        self.__osd_notification.display(message, line=1)
 
     def __send_message_to_queue(self, title, message):
         """
@@ -304,7 +243,15 @@ class BEINCCustomHandler(http.server.BaseHTTPRequestHandler):
     def __handle_pull(self, data):
         """
         """
-        return {}
+        instance = self.server.instances[data.get('resource_name')]
+        try:
+            if not instance.queueable:
+                raise BEINCError405(
+                    'This instance does not support queuing')
+            return {'message': 'OK. Fetched.',
+                    'data': {'messages': instance.get_queue()}}
+        except Exception as e:
+            self.__generate_json_error(500, str(e))
 
     def __generate_json_error(self, code, message):
         """
