@@ -24,9 +24,15 @@ import socket
 import ssl
 import sys
 
-from urllib import urlencode
-from urllib2 import urlopen
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
 
+if PY3:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+else:
+    from urllib import urlencode
+    from urllib2 import urlopen
 
 import weechat
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
@@ -22,7 +22,6 @@ import argparse
 import cgi
 import errno
 import getpass
-import http.server
 import json
 import logging
 import os
@@ -32,8 +31,19 @@ import sys
 from functools import wraps
 from logging.config import fileConfig
 
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+else:
+    from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+
 try:
-    import notify2 as pynotify
+    if PY3:
+        import notify2 as pynotify
+    else:
+        import pynotify
 except ImportError as e:
     pynotify = None
 
@@ -182,7 +192,7 @@ class BEINCInstance(object):
         self.__message_queue.append({'title': title, 'message': message})
 
 
-class BEINCCustomHandler(http.server.BaseHTTPRequestHandler):
+class BEINCCustomHandler(BaseHTTPRequestHandler):
     """
     """
     def do_POST(self):
@@ -288,7 +298,7 @@ class BEINCCustomHandler(http.server.BaseHTTPRequestHandler):
                                     indent=4).encode('utf-8'))
 
 
-class BEINCNotifyServer(http.server.HTTPServer):
+class BEINCNotifyServer(HTTPServer):
     """
     """
     def set_config(self, config):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
@@ -29,11 +29,21 @@ import ssl
 import sys
 import time
 
-from urllib.parse import urlencode
-from urllib.request import urlopen
+PY2 = sys.version_info[0] == 2
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+else:
+    from urllib import urlencode
+    from urllib2 import urlopen
 
 try:
-    import notify2 as pynotify
+    if PY3:
+        import notify2 as pynotify
+    else:
+        import pynotify
 except ImportError as e:
     pynotify = None
 
