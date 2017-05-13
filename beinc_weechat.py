@@ -341,10 +341,10 @@ class WeechatTarget(object):
                         ('password', self.__password),
                         ('title', title),
                         ('message', message)
-                        )),
+                        )).encode('utf-8'),
                 timeout=self.__socket_timeout,
                 context=self.__context)
-            response_dict = json.loads(response.read())
+            response_dict = json.loads(response.read().decode('utf-8'))
             if response.code != 200:
                 raise socket.error(response_dict.get('message', ''))
             if self.__debug:
