@@ -125,9 +125,16 @@ class BEINCInstance(object):
                 sys.exit(errno.EPERM)
             try:
                 self.__osd_notification = pynotify.Notification(' ')
-                self.__osd_notification.timeout = 1000 * int(instance_dict.get(
-                    'osd_timeout', 5))
-                self.__osd_notification.set_category('im.received')
+                if PY3:
+                    self.__osd_notification.timeout = 1000 * int(
+                        instance_dict.get('osd_timeout', 5))
+                    self.__osd_notification.set_category('im.received')
+                else:
+                    self.__osd_notification.set_timeout(
+                        1000 * int(instance_dict.get('osd_timeout', 5)))
+                    self.__osd_notification.set_property(
+                        'app_name',
+                        '{0} {1}'.format(sys.argv[0], __version__))
                 self.__osd_type = BEINC_OSD_TYPE_PYNOTIFY
             except Exception as e:
                 sys.stderr.write(

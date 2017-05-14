@@ -312,15 +312,14 @@ class WeechatTarget(object):
         values: dict
         template: str
         """
-        template = unicode(template)
         timestamp = datetime.datetime.now().strftime(self.__timestamp_format)
-        replacements = {u'%S': values['server'].decode('utf-8'),
-                        u'%s': values['source_nick'].decode('utf-8'),
-                        u'%c': values['channel'].decode('utf-8'),
-                        u'%m': values['message'].decode('utf-8'),
-                        u'%t': timestamp.decode('utf-8'),
-                        u'%p': u'BEINC',
-                        u'%n': values['own_nick'].decode('utf-8')}
+        replacements = {'%S': values['server'],
+                        '%s': values['source_nick'],
+                        '%c': values['channel'],
+                        '%m': values['message'],
+                        '%t': timestamp,
+                        '%p': u'BEINC',
+                        '%n': values['own_nick']}
         for key, value in replacements.items():
             template = template.replace(key, value)
         return template.encode('utf-8')
