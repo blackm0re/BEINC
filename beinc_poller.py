@@ -71,8 +71,14 @@ def display_notification(args, title, message):
             raise Exception('There was a problem with libnotify\n')
         notification_obj = pynotify.Notification(summary=title,
                                                  message=message)
-        notification_obj.timeout = 1000 * args.osd_timeout
-        notification_obj.set_category('im.received')
+        if PY3:
+            notification_obj.timeout = 1000 * args.osd_timeout
+            notification_obj.set_category('im.received')
+        else:
+            notification_obj.set_timeout(1000 * args.osd_timeout)
+            notification_obj.set_property(
+                'app_name',
+                '{0} {1}'.format(sys.argv[0], __version__))
         notification_obj.show()
     else:
         raise Exception(
