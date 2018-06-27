@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
-# Copyright (C) 2013-2017 Simeon Simeonov
+# Copyright (C) 2013-2018 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
