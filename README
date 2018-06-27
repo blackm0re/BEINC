@@ -52,7 +52,7 @@ directly notify the user. Solution:
  - set up the beinc_server.py on the desktop workstation (the computer where the
    notification-message should be displayed). Define an unprivileged port for 
    beinc_server.py to listen on and enable its OSD capabilities 
-   (through pynotify and/or pyosd)
+   (through pynotify)
 
 Scenario two:
 The user's computer can NOT be reached by the server running the IRC client.
@@ -93,13 +93,11 @@ All components tested on: Gentoo GNU/Linux 2014,2015,
 
 
 Requirements:
-All components: Python 2.7.*
-N.B. For TLS1.1 and TLS1.2 client support you need Python>=2.7.9
+All components: Python >= 2.7.9 or Python >= 3.4.*
 
-beinc_server.py: Twisted Web >= 14.0, pyopenssl >= 0.13.0,
-                 pynotify >= 0.1 (optional), pyosd >= 0.2 (optional)
+beinc_server.py: pynotify >= 0.1 (optional)
 beinc_weechat.py: Weechat >= 0.4.0
-beinc_poller.py: pynotify >= 0.1 or pyosd >= 0.2
+beinc_poller.py: pynotify >= 0.1
 beinc_generic_client.py: No additional software required
 
 Read INSTALL in this very same folder for more details about installing the requirements!

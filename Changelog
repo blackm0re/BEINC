@@ -1,3 +1,7 @@
+v3.0:
+    - remove TwistedWeb dependency and write the beinc_server.py in pure Python
+    - implement Python >= 3.4.0 support
+
 v2.0:
     - replace charrypy with TwistedWeb as beinc_server.py backend
     - use XMLRPC instead of HTTP POST for a cleaner and more robust API
@@ -5,7 +9,8 @@ v2.0:
     - bugfixes
 
 v1.1:
-    - when beinc_poller.py fetches several messages from a queue it won't let the last one to completely overwrite the previous ones
+    - when beinc_poller.py fetches several messages from a queue it won't let the
+      last one to completely overwrite the previous ones
 
 v1.0
     - Initial version
