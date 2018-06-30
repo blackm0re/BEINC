@@ -90,9 +90,9 @@ your URL will be: https://hostname:port
 ## Supported systems & requirements
 
 Any system running the software required for the selected components.
-All components tested on: Gentoo GNU/Linux 2014,2015,
-                          Ubuntu GNU/Linux 14.4,14.10,
-                          FreeBSD 10.x
+All components tested on: Gentoo GNU/Linux,
+                          Ubuntu GNU/Linux 16.4, 18.4,
+                          FreeBSD 10.x, 11.x
 
 
 ### Requirements
