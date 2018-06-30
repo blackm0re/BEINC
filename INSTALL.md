@@ -1,58 +1,43 @@
-Installation Instructions
--------------------------
+## Installation Instructions
 
 Refer to README for a basic information about the different BEINC components
 and their software requirements!
 
 
-Installing the dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Installing the dependencies
+
+#### Gentoo GNU/Linux 2014, 2015
+
+# emerge -va dev-python/pyopenssl dev-python/notify-python
 
 
-Gentoo GNU/Linux 2014, 2015
-..........................
+#### Ubuntu GNU/Linux
 
-# emerge -va dev-python/pyopenssl dev-python/twisted-web dev-python/notify-python dev-python/pyosd 
-
-
-Ubuntu GNU/Linux
-................
-
-# apt-get install python-openssl python-twisted-web python-notify2 python-pyosd 
+# apt-get install python-openssl python-notify2
 
 
-FreeBSD 9, 10
-.............
+#### FreeBSD 10, 11
 
 # cd /usr/ports/security/py-openssl
-# make install clean
-
-# cd /usr/ports/www/py-twistedWeb
 # make install clean
 
 # cd /usr/ports/devel/py-notify
 # make install clean
 
-# cd /usr/ports/misc/py-osd
-# make install clean
 
-
-Intallation using virtualenv and pip
-....................................
+#### Intallation using virtualenv and pip
 
 Very often you are not the administrator of the server hosting your BEINC server
 This is where virtualenv may become handy (provided that it has been installed):
 $ virtualenv beinc_installation
 $ cd beinc_installation
 $ source bin/activate
-$ pip install Twisted
 $ pip install pyopenssl
 $ cd beinc-<version>
 $ ./beinc_server.py -h
 
 
-Installing and setting up BEINC
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### Installing and setting up BEINC
 
 Unpack the latest version of BEINC
 $ tar zxvf beinc-<version>.tar.gz

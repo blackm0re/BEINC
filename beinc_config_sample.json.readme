@@ -30,8 +30,8 @@ documentation to better illustrate the comments.
 
 			# Encryption method for the BEINC server
 			# Possible values:
-			# "" or "auto" - Let Twisted decide (use the newest possible method)
-			# "SSLv3" - SSLv3 (weak)
+			# "" or "auto" - Let the server decide
+            #                (use the newest possible method)
 			# "TLSv1" - TLSv1.0
 			# "TLSv1_1" - TLSv1.1
 			# "TLSv1_2" - TLSv1.2 (most secure, but requires OpenSSL >= 1.0.1e)
@@ -52,36 +52,11 @@ documentation to better illustrate the comments.
                 # Possible values:
                 # "none" - the instance will serve for queueing
                 # "pynotify" - OSD implemented using pynotify (libnotify)
-                # "pyosd" - OSD implemented using pyosd (xosd)                
                 "osd_system": "pynotify",
 
                 # OSD timeout in seconds
                 # The amount of time the OSD message will remain in the screen
                 "osd_timeout": 5,
-
-                # Specify a custom font for the pyosd - backend
-                # "xfontsel" can be used to obtain a list of available fonts
-                "pyosd_font": "",
-
-                # Vertical offset (in pixels) for the pyosd - backend
-                "pyosd_vertical_offset": 120,
-
-                # Horizontal offset (in pixels) for the pyosd - backend
-                "pyosd_horizontal_offset": 30,
-
-                # Text horizontal alignment for the pyosd - backend
-                # Possible values:
-                # "left", "center", "right"
-                "pyosd_align": "left",
-
-                # Text vertical position for the pyosd - backend
-                # Possible values:
-                # "top", "middle", "bottom"                
-                "pyosd_position": "bottom",
-
-                # Font color for the pyosd - backend
-                # See "rgb.txt" in the X11 distribution of a list of colors
-                "pyosd_color": "blue",
 
                 # How many entries to be kept in the queue
                 # (when "osd_system": "none")
@@ -123,13 +98,12 @@ documentation to better illustrate the comments.
 				"ssl_ciphers": "ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384",
 
 				# Don't check whether the target's hostname matches the server's
-				# certificate. (Only for Python >= 2.7.9)
+				# certificate.
 				# Default: 0
 				"disable-hostname-check": 0,
 
 				# Force the client to use a specified SSL/TLS version
-				# Valid values: "auto", "SSLv3", "TLSv1", "TLSv1_1", "TLSv1_2"
-				# N.B. "TLSv1_1" and "TLSv1_2" only available in Python >= 2.7.9
+				# Valid values: "auto", "TLSv1", "TLSv1_1", "TLSv1_2"
 				# Default: "auto" (Let's OpenSSL select the best option)
 				"ssl_version": "auto",
 

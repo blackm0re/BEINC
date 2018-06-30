@@ -16,18 +16,6 @@
             {
                 "name": "instance2",
                 "password": "changeme",
-                "osd_system": "pyosd",
-                "osd_timeout": 6,
-                "pyosd_font": "-adobe-courier-bold-o-normal--24-240-75-75-m-150-iso8859-1",
-                "pyosd_vertical_offset": 120,
-                "pyosd_horizontal_offset": 30,
-                "pyosd_align": "left",
-                "pyosd_position": "top",
-                "pyosd_color": "blue"
-            },
-            {
-                "name": "instance3",
-                "password": "changeme",
                 "osd_system": "none",
                 "osd_timeout": 5,
                 "queue_size": 4

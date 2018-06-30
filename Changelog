@@ -1,6 +1,8 @@
 v3.0:
-    - remove TwistedWeb dependency and write the beinc_server.py in pure Python
+    - remove the TwistedWeb dependency and rewrite the beinc_server.py
+      in pure Python
     - implement Python >= 3.4.0 support
+    - remove pyosd support
 
 v2.0:
     - replace charrypy with TwistedWeb as beinc_server.py backend

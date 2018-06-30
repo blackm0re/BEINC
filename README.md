@@ -2,8 +2,7 @@ Copyright (C) 2014-2018 - Simeon Simeonov
 See the end of the file for license conditions.
 
 
-What is BEINC?
---------------
+## What is BEINC?
 
 Blackmore's Enchanced IRC Notification Collection (BEINC) is a free set of
 components that aims to provide a complete system for different
@@ -23,8 +22,7 @@ beinc_generic_client.py - a simple client used to push notification messages
 + documentation and a sample configuration file (beinc_config_sample.json)
 
 
-Why should I use BEINC and what has it done for me lately?
-----------------------------------------------------------
+## Why should I use BEINC and what has it done for me lately?
 
 BEINC is a free-software, licensed under the GPL3. It gives you the freedoms
 of using it, studying it and modifying it.
@@ -44,7 +42,9 @@ No matter which of the two scenarios applies to your needs, you should start by
    Configure the client to send notifications to the beinc_server.py
 N.B. Using encryption is important in these days and age.
 
-Scenario one: 
+
+### Scenario one
+
 The user's computer can be reached by the server running the IRC client.
 If the server (running the IRC client) is able to connect to 
 a specified TCP port on the user's computer, this is sufficient for BEINC to
@@ -54,10 +54,13 @@ directly notify the user. Solution:
    beinc_server.py to listen on and enable its OSD capabilities 
    (through pynotify)
 
-Scenario two:
+
+### Scenario two
+
 The user's computer can NOT be reached by the server running the IRC client.
 This scenario is typical for users that are working on computers that can not
 be reached from outside.
+
 Solution:
  - find a server that can be reached by the server running the IRC client.
  - set up the beinc_server.py on it. No OSD capabilities are needed (no X11).
@@ -79,20 +82,20 @@ There are 2 operations that can be done on an instance:
  - pull - a poller (f.i. beinc_poller.py) is fetching data from the instance-queue.
           A pull is available only for instances defined for queueing. 
           (read beinc_config_sample.json.readme for details!)
-Example: 
+Example:
 If you defined a beinc_server.py instance with SSL-support,
 your URL will be: https://hostname:port
 
 
-Supported systems & requirements
---------------------------------
+## Supported systems & requirements
+
 Any system running the software required for the selected components.
 All components tested on: Gentoo GNU/Linux 2014,2015,
                           Ubuntu GNU/Linux 14.4,14.10,
                           FreeBSD 10.x
 
 
-Requirements:
+### Requirements
 All components: Python >= 2.7.9 or Python >= 3.4.*
 
 beinc_server.py: pynotify >= 0.1 (optional)
@@ -103,8 +106,7 @@ beinc_generic_client.py: No additional software required
 Read INSTALL in this very same folder for more details about installing the requirements!
 
 
-License
--------
+### License
 
 This file is part of BEINC.
 
