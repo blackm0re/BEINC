@@ -21,7 +21,6 @@
 import argparse
 import cgi
 import errno
-import getpass
 import json
 import logging
 import os
@@ -88,7 +87,7 @@ def beinc_login_required(method):
             raise BEINCError401('Password missing')
         try:
             instance = self.server.instances[data.get('resource_name')]
-        except Exception as e:
+        except Exception:
             raise BEINCError401('Wrong instance or password')
         if not instance.password_match(data.get('password')):
             raise BEINCError401('Wrong instance or password')
