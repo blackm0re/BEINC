@@ -438,6 +438,8 @@ if __name__ == '__main__':
                 ciphers=ssl_acceptable_ciphers_str)
         logger.info('Done!')
         beinc_server.serve_forever()
+    except KeyboardInterrupt:
+        print('\n\nTerminating...')
     except Exception as e:
         sys.stderr.write('BEINCServer critical error: {0}\n'.format(e))
         sys.exit(1)
