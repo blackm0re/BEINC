@@ -117,6 +117,7 @@ def poll_notifications(scheduler, args):
             display_notification(args,
                                  entry.get('title', ''),
                                  entry.get('message', ''))
+        response.close()
         scheduler.enter(args.frequency,
                         1,
                         poll_notifications,

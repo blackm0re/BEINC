@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
-# Copyright (C) 2013-2018 Simeon Simeonov
+# Copyright (C) 2013-2019 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@ import socket
 import ssl
 import sys
 
+import weechat
+
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
@@ -33,8 +35,6 @@ if PY3:
 else:
     from urllib import urlencode
     from urllib2 import urlopen
-
-import weechat
 
 
 __author__ = 'Simeon Simeonov'
@@ -395,6 +395,9 @@ def beinc_cmd_target_handler(cmd_tokens):
         beinc_prnt('beinc target [ list | enable <name> | disable <name> ]')
         return weechat.WEECHAT_RC_OK
     if cmd_tokens[0] == 'list':
+        beinc_prnt('--- Globals ---')
+        for key, value in global_values.items():
+            beinc_prnt('{key} -> {value}'.format(key=key, value=str(value)))
         beinc_prnt('--- Targets ---')
         for target in target_list:
             beinc_prnt(str(target))
@@ -473,13 +476,6 @@ def beinc_privmsg_handler(data, signal, signal_data):
         # priv messages are handled here
         if not global_values['global_private_messages_policy']:
             return weechat.WEECHAT_RC_OK
-        p_messages_policy = global_values['global_private_messages_policy']
-        if p_messages_policy == BEINC_POLICY_LIST_ONLY and \
-           '{0}.{1}'.format(
-               ph_values['server'],
-               ph_values['source_nick'].lower()
-           ) not in global_values['global_nicks']:
-            return weechat.WEECHAT_RC_OK
         for target in target_list:
             if not target.enabled:
                 continue
@@ -494,14 +490,6 @@ def beinc_privmsg_handler(data, signal, signal_data):
         # notify messages are handled here
         if not global_values['global_notifications_policy']:
             return weechat.WEECHAT_RC_OK
-        notifications_policy = global_values['global_notifications_policy']
-        if notifications_policy == BEINC_POLICY_LIST_ONLY and (
-                '{0}.{1}'.format(
-                    ph_values['server'],
-                    ph_values['channel'].lower()
-                ) not in global_values['global_chans']
-        ):
-            return weechat.WEECHAT_RC_OK
         for target in target_list:
             if not target.enabled:
                 continue
@@ -515,14 +503,6 @@ def beinc_privmsg_handler(data, signal, signal_data):
     elif global_values['global_channel_messages_policy']:
         # chan messages are handled here
         if not global_values['global_notifications_policy']:
-            return weechat.WEECHAT_RC_OK
-        c_messages_policy = global_values['global_channel_messages_policy']
-        if c_messages_policy == BEINC_POLICY_LIST_ONLY and (
-                '{0}.{1}'.format(
-                    ph_values['server'],
-                    ph_values['channel'].lower()
-                ) not in global_values['global_chans']
-        ):
             return weechat.WEECHAT_RC_OK
         for target in target_list:
             if not target.enabled:
@@ -550,8 +530,6 @@ def beinc_init():
 
     # global chans/nicks sets are used to speed up the filtering
     global_values = dict()
-    global_values['global_chans'] = set()
-    global_values['global_nicks'] = set()
     target_list = list()
     custom_error = ''
     global_values['global_channel_messages_policy'] = False
@@ -586,8 +564,6 @@ def beinc_init():
             except Exception as e:
                 beinc_prnt('Unable to add target: {0}'.format(e))
                 continue
-            global_values['global_chans'].update(new_target.chans)
-            global_values['global_nicks'].update(new_target.nicks)
             if new_target.channel_messages_policy:
                 global_values['global_channel_messages_policy'] = True
             if new_target.private_messages_policy:
