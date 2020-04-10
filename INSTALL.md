@@ -1,38 +1,38 @@
-## Installation Instructions
+# Installation Instructions
 
 Refer to README for a basic information about the different BEINC components
 and their software requirements!
 
 
-### Installing the dependencies
+## Installing the dependencies
 
-#### Gentoo GNU/Linux 2014, 2015
+### Gentoo GNU/Linux
 
-# emerge -va dev-python/pyopenssl dev-python/notify-python
-
-
-#### Ubuntu GNU/Linux
-
-# apt-get install python-openssl python-notify2
+   ```bash
+   emerge -va dev-python/notify2
+   ```
 
 
-#### FreeBSD 10, 11
+### Ubuntu GNU/Linux
 
-# cd /usr/ports/security/py-openssl
-# make install clean
+   ```bash
+   apt-get install python-notify2
+   ```
+
+
+### FreeBSD 12
 
 # cd /usr/ports/devel/py-notify
 # make install clean
 
 
-#### Intallation using virtualenv and pip
+### Intallation using virtualenv and pip
 
 Very often you are not the administrator of the server hosting your BEINC server
 This is where virtualenv may become handy (provided that it has been installed):
 $ virtualenv beinc_installation
 $ cd beinc_installation
 $ source bin/activate
-$ pip install pyopenssl
 $ cd beinc-<version>
 $ ./beinc_server.py -h
 
@@ -59,13 +59,13 @@ The example loads the server listening on 10.0.0.44, port 9678 using the default
 ~/.beinc_server.json as a configuration file and usually gives you the Twisted
 log console
 
-beinc_poller.py:
-$ ./beinc_poller.py -h
+beinc_pull.py:
+$ ./beinc_pull.py -h
 The example lists all available command options
-$ ./beinc_poller.py -n weechat -t 10 -f 7 --cert-file /home/sgs/weechat_cert.crt \
+$ ./beinc_pull.py -n weechat -t 10 -f 7 --cert-file /home/sgs/weechat_cert.crt \
   -p /home/sgs/.weechat_beinc_passwd https://10.0.0.44:9678
-Starts polling from the instance (target) defined above,
-defining an OSD timeout of 10 seconds, polling frequency of 7 seconds,
+Starts pulling from the instance (target) defined above,
+defining an OSD timeout of 10 seconds, pulling frequency of 7 seconds,
 checking whether the server's SSL certificate was signed (issued) by /home/sgs/weechat_cert.crt,
 extracting the target's password from /home/sgs/.weechat_beinc_passwd
 

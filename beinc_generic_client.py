@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v2.0
-# Copyright (C) 2013-2018 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.0
+# Copyright (C) 2013-2020 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,146 +16,114 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+"""A generic BEINC client that can be used for testing or as a template"""
 import argparse
 import errno
 import getpass
-import httplib  # for Python < 2.7.9
+import io
+import json
 import os
 import socket
 import ssl
 import sys
-import xmlrpclib
+import urllib.parse
+import urllib.request
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '3.0'
+__version__ = '4.0'
 __license__ = 'GPL3'
 
 
-BEINC_SSL_METHODS = {'TLSv1': ssl.PROTOCOL_TLSv1}
-try:
-    BEINC_SSL_METHODS.update({'TLSv1_1': ssl.PROTOCOL_TLSv1_1})
-    BEINC_SSL_METHODS.update({'TLSv1_2': ssl.PROTOCOL_TLSv1_2})
-except:
-    pass
+def eprint(*arg, **kwargs):
+    """stdderr print wrapper"""
+    print(*arg, file=sys.stderr, flush=True, **kwargs)
 
 
-class BEINCCustomHTTPSConnection(httplib.HTTPConnection):
+def fetch_password(args_password):
     """
-    This class allows communication via SSL.
+    Fetches the password from the provided `args_password`
 
-    It is a reimplementation of httplib.HTTPSConnection and
-    allows the server certificate to be validated against CA
-    This functionality lacks in Python < 2.7.9
+    :param args_password: The password coming from argparse
+    :type args_password: str
+
+    :return: The password string
+    :rtype: str
     """
-    default_port = httplib.HTTPS_PORT
-
-    def __init__(self, host, port=None, key_file=None, cert_file=None,
-                 strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                 source_address=None, custom_ssl_options={}):
-        httplib.HTTPConnection.__init__(self, host, port, strict, timeout,
-                                        source_address)
-        self.key_file = key_file
-        self.cert_file = cert_file
-        self.custom_ssl_options = custom_ssl_options
-
-    def connect(self):
-        "Connect to a host on a given (SSL) port."
-        sock = socket.create_connection((self.host, self.port),
-                                        self.timeout, self.source_address)
-        if self._tunnel_host:
-            self.sock = sock
-            self._tunnel()
-        self.sock = ssl.wrap_socket(sock,
-                                    self.key_file,
-                                    self.cert_file,
-                                    **self.custom_ssl_options)
-
-
-class BEINCCustomSafeTransport(xmlrpclib.Transport):
-    """
-    Provides an alternative HTTPS transport for clients running on Python<2.7.9
-    """
-
-    def __init__(self, use_datetime=0, custom_ssl_options={}):
-        xmlrpclib.Transport.__init__(self, use_datetime=use_datetime)
-        self.custom_ssl_options = custom_ssl_options
-
-    def make_connection(self, host):
-        if self._connection and host == self._connection[0]:
-            return self._connection[1]
+    if not args_password:
         try:
-            HTTPS = BEINCCustomHTTPSConnection
-        except AttributeError:
-            raise NotImplementedError(
-                "your version of httplib doesn't support HTTPS"
-            )
-        else:
-            chost, self._extra_headers, x509 = self.get_host_info(host)
-            self._connection = host, HTTPS(
-                chost,
-                None,
-                custom_ssl_options=self.custom_ssl_options,
-                **(x509 or {}))
-            return self._connection[1]
+            return getpass.getpass()
+        except KeyboardInterrupt:
+            eprint(os.linesep + 'Prompt terminated')
+            sys.exit(errno.EACCES)
+    elif os.path.isfile(args_password):
+        try:
+            with io.open(args_password, 'r') as fp:
+                passwd = fp.readline()
+                if passwd.strip():
+                    return passwd.strip()
+        except Exception as e:
+            eprint(f'Unable to open password file: {e}')
+            sys.exit(1)
+    return args_password
 
 
-def action_execute(args):
+def pull_notifications(ssl_context, args):
     """
+    Pulls the notifications from the BEINC server.
+
+    :param ssl_context: The SSL context object
+    :type ssl_context: ssl.SSLContext
+
+    :param args: The arguments assigned from argparse
+    :type args: argparse.Namespace
+
+    :return: The notifications (if any)
+    :rtype: list
     """
-    try:
-        ssl_version = BEINC_SSL_METHODS.get(args.ssl_version,
-                                            ssl.PROTOCOL_SSLv23)
-        if sys.hexversion >= 0x20709f0:
-            # Python >= 2.7.9
-            context = ssl.SSLContext(ssl_version)
-            context.verify_mode = ssl.CERT_NONE
-            if args.cert:
-                context.verify_mode = ssl.CERT_REQUIRED
-                context.load_verify_locations(os.path.expanduser(args.cert))
-                context.check_hostname = bool(not args.disable_hostname_check)
-            if args.ciphers:
-                context.set_ciphers(args.ciphers)
-            transport = xmlrpclib.SafeTransport(context=context)
-        else:
-            # Python < 2.7.9
-            ssl_options = {}
-            ssl_options['ssl_version'] = ssl_version
-            if args.cert:
-                ssl_options['ca_certs'] = os.path.expanduser(args.cert)
-                ssl_options['cert_reqs'] = ssl.CERT_REQUIRED
-            if args.ciphers:
-                ssl_options['ciphers'] = args.ciphers
-            transport = BEINCCustomSafeTransport(
-                custom_ssl_options=ssl_options)
-        server = xmlrpclib.ServerProxy(args.url,
-                                       transport=transport)
-        if args.pull:
-            print(server.pull(args.rname, args.password))
-        else:
-            print(server.push(args.rname,
-                              args.password,
-                              args.title,
-                              args.message))
-    except xmlrpclib.Fault as fault:
-        sys.stderr.write(
-            'BEINC server answered with errorCode={0}: {1}\n'.format(
-                fault.faultCode,
-                fault.faultString))
-    except ssl.SSLError as e:
-        sys.stderr.write('BEINC SSL/TLS error: {0}\n'.format(e))
-        sys.exit(errno.EPERM)
-    except socket.error as e:
-        sys.stderr.write('BEINC connection error: {0}\n'.format(e))
-        sys.exit(errno.EPERM)
-    except Exception as e:
-        sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
-        sys.exit(errno.EPERM)
+    response = urllib.request.urlopen(
+        args.url,
+        data=urllib.parse.urlencode(
+            (
+                ('resource_name', args.rname),
+                ('password', args.password)
+            )).encode('utf-8'),
+        timeout=args.socket_timeout,
+        context=ssl_context)
+    response_dict = json.loads(response.read().decode('utf-8'))
+    if response.code != 200:
+        raise socket.error(response_dict.get('message', ''))
+    return response_dict['data']['messages']
 
 
-def main():
+def push_notification(ssl_context, args):
+    """
+    Pushes a single notification to the BEINC server.
+
+    :param ssl_context: The SSL context object
+    :type ssl_context: ssl.SSLContext
+
+    :param args: The arguments assigned from argparse
+    :type args: argparse.Namespace
+    """
+    response = urllib.request.urlopen(
+        args.url,
+        data=urllib.parse.urlencode(
+            (
+                ('resource_name', args.rname),
+                ('password', args.password),
+                ('title', args.title),
+                ('message', args.message)
+            )).encode('utf-8'),
+        timeout=args.socket_timeout,
+        context=ssl_context)
+    response_dict = json.loads(response.read().decode('utf-8'))
+    if response.code != 200:
+        raise socket.error(response_dict.get('message', ''))
+
+
+def main(inargs=None):
+    """main entry"""
     parser = argparse.ArgumentParser(
         description='The following options are available')
     parser.add_argument(
@@ -178,13 +146,12 @@ def main():
         dest='ciphers',
         default='',
         help='Preferred ciphers list (default: auto)')
-    if sys.hexversion >= 0x20709f0:
-        parser.add_argument(
-            '--disable-hostname-check',
-            action='store_true',
-            dest='disable_hostname_check',
-            default=False,
-            help='Do not check whether server cert matches server hostname')
+    parser.add_argument(
+        '--disable-hostname-check',
+        action='store_true',
+        dest='disable_hostname_check',
+        default=False,
+        help='Do not check whether server cert matches server hostname')
     parser.add_argument(
         '-m', '--message',
         metavar='MESSAGE',
@@ -213,23 +180,6 @@ def main():
         dest='pull',
         default=False,
         help='Perform a pull operation (default: push)')
-    if sys.hexversion >= 0x20709f0:
-        parser.add_argument(
-            '-s', '--ssl-version',
-            metavar='VERSION',
-            type=str,
-            dest='ssl_version',
-            default='auto',
-            help='Use SSL version: "auto" (default), '
-            '"SSLv3", "TLSv1", "TLSv1_1", "TLSv1_2"')
-    else:
-        parser.add_argument(
-            '-s', '--ssl-version',
-            metavar='VERSION',
-            type=str,
-            dest='ssl_version',
-            default='auto',
-            help='Use SSL version: "auto" (default), "SSLv3", "TLSv1"')
     parser.add_argument(
         '-T', '--socket-timeout',
         metavar='SECONDS',
@@ -247,29 +197,36 @@ def main():
     parser.add_argument(
         '-v', '--version',
         action='version',
-        version='%(prog)s {0}'.format(__version__),
+        version=f'%(prog)s {__version__}',
         help='display program-version and exit')
-    args = parser.parse_args()
-
-    if not args.password:
-        try:
-            args.password = getpass.getpass()
-        except Exception as e:
-            sys.stderr.write('Prompt terminated\n')
-            sys.exit(errno.EACCES)
-    elif os.path.isfile(args.password):
-        try:
-            with open(args.password, 'r') as fp:
-                passwd = fp.readline()
-                if passwd.strip():
-                    args.password = passwd.strip()
-        except Exception as e:
-            sys.stderr.write('Unable to open password file: {0}'.format(e))
-            sys.exit(1)
+    args = parser.parse_args(inargs)
     if args.socket_timeout:
         socket.setdefaulttimeout(args.socket_timeout)
-    action_execute(args)
-    sys.exit(0)
+    args.password = fetch_password(args.password)
+    try:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        context.verify_mode = ssl.CERT_NONE
+        if args.cert:
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(cafile=os.path.expanduser(args.cert))
+            context.check_hostname = bool(not args.disable_hostname_check)
+        if args.ciphers:
+            context.set_ciphers(args.ciphers)
+        if args.pull:
+            print(json.dumps(pull_notifications(context, args), indent=4))
+        else:
+            push_notification(context, args)
+            print('OK')
+        sys.exit(0)
+    except ssl.SSLError as e:
+        eprint(f'BEINC SSL/TLS error: {e}')
+        sys.exit(errno.EPERM)
+    except socket.error as e:
+        eprint(f'BEINC connection error: {e}')
+        sys.exit(errno.EPERM)
+    except Exception as e:
+        eprint(f'BEINC generic client error: {e}')
+        sys.exit(errno.EPERM)
 
 
 if __name__ == '__main__':

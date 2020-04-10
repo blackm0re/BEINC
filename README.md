@@ -1,4 +1,4 @@
-Copyright (C) 2014-2018 - Simeon Simeonov
+Copyright (C) 2014-2020 - Simeon Simeonov
 See the end of the file for license conditions.
 
 
@@ -10,14 +10,14 @@ on-screen-display notification scenarios.
 
 The current version of BEINC contains the following components:
 beinc_server.py - server used for queueing or providing on-screen-display (OSD)
-beinc_poller.py - client used to fetch enqueued messages from beinc_server.py
-                  and provide OSD
+beinc_pull.py - client used to fetch enqueued messages from beinc_server.py
+                and provide OSD
 beinc_weechat.py - a complete script / client for the Weechat IRC client >=0.4.0
                    used to push notification messages to beinc_server.py
 beinc_generic_client.py - a simple client used to push notification messages
                           to beinc_server.py
                           Its main purpose is to provide a convenient way to 
-                          test beinc_server.py (and beinc_poller.py) as well as
+                          test beinc_server.py (and beinc_pull.py) as well as
                           to serve as an example for how to develop BEINC-clients
 + documentation and a sample configuration file (beinc_config_sample.json)
 
@@ -28,7 +28,7 @@ BEINC is a free-software, licensed under the GPL3. It gives you the freedoms
 of using it, studying it and modifying it.
 
 BEINC is designed to assist you two common scenarios. 
-As an example we will consider the case of an IRC cliet, although BEINC can be
+As an example we will consider the case of an IRC client, although BEINC can be
 used by any client that conforms with BEINC's "messaging protocol".
 
 We have the common situation where a user is accessing an IRC client located on
@@ -66,20 +66,20 @@ Solution:
  - set up the beinc_server.py on it. No OSD capabilities are needed (no X11).
    Define instance(s) for queueing. Define a queue size 
    (how many notifications to store) for each of them.
- - set up beinc_poller.py on the desktop workstation (the computer where the
+ - set up beinc_pull.py on the desktop workstation (the computer where the
    notification-message should be displayed).
-   beinc_poller.py should be able to access the server running beinc_server.py
-   Polling interval of 5 seconds should be enough for most users.
+   beinc_pull.py should be able to access the server running beinc_server.py
+   Pulling interval of 5 seconds should be enough for most users.
 
 Read beinc_config_sample.json.readme for details on how to setup 
 beinc_server.py and beinc_weechat.py!
 Use "-h" command line parameter to display the available options for
-beinc_poller.py and beinc_generic_client.py
+beinc_pull.py and beinc_generic_client.py
 Each configured beinc_server.py instance has an unique name.
 There are 2 operations that can be done on an instance:
  - push - a client is sending a notification to the BEINC server.
           A push is available for all instances.
- - pull - a poller (f.i. beinc_poller.py) is fetching data from the instance-queue.
+ - pull - a pull (f.i. beinc_pull.py) is fetching data from the instance-queue.
           A pull is available only for instances defined for queueing. 
           (read beinc_config_sample.json.readme for details!)
 Example:
@@ -91,28 +91,38 @@ your URL will be: https://hostname:port
 
 Any system running the software required for the selected components.
 All components tested on: Gentoo GNU/Linux,
-                          Ubuntu GNU/Linux 16.4, 18.4,
-                          FreeBSD 10.x, 11.x
+                          Ubuntu GNU/Linux 18.4,
+                          FreeBSD 12.x
 
 
 ### Requirements
-All components: Python >= 2.7.9 or Python >= 3.4.*
+All components: Python >= 3.6.*
 
 beinc_server.py: pynotify >= 0.1 (optional)
 beinc_weechat.py: Weechat >= 0.4.0
-beinc_poller.py: pynotify >= 0.1
+beinc_pull.py: pynotify >= 0.1
 beinc_generic_client.py: No additional software required
 
 Read INSTALL in this very same folder for more details about installing the requirements!
 
 
-### License
+## Support and contributing
+
+BEINC is hosted on GitHub: https://github.com/blackm0re/BEINC
+
+
+## Author
+
+Simeon Simeonov - sgs @ Freenode
+
+
+## License
 
 This file is part of BEINC.
 
 BEINC is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or                                                                                          
+the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,

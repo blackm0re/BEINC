@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v3.0
-# Copyright (C) 2013-2018 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.0
+# Copyright (C) 2013-2020 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+"""A simple client that pulls notifications from a BEINC server"""
 import argparse
 import errno
 import getpass
+import io
 import json
 import os
 import sched
@@ -28,69 +28,92 @@ import socket
 import ssl
 import sys
 import time
-
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    from urllib.parse import urlencode
-    from urllib.request import urlopen
-else:
-    from urllib import urlencode
-    from urllib2 import urlopen
+import urllib.parse
+import urllib.request
 
 try:
-    if PY3:
-        import notify2 as pynotify
-    else:
-        import pynotify
-except ImportError as e:
+    import notify2 as pynotify
+except ImportError:
     pynotify = None
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '3.0'
+__version__ = '4.0'
 __license__ = 'GPL3'
+
+
+def eprint(*arg, **kwargs):
+    """stdderr print wrapper"""
+    print(*arg, file=sys.stderr, flush=True, **kwargs)
+
+
+def fetch_password(args_password):
+    """
+    Fetches the password from the provided `args_password`
+
+    :param args_password: The password coming from argparse
+    :type args_password: str
+
+    :return: The password string
+    :rtype: str
+    """
+    if not args_password:
+        try:
+            return getpass.getpass()
+        except KeyboardInterrupt:
+            eprint(os.linesep + 'Prompt terminated')
+            sys.exit(errno.EACCES)
+    elif os.path.isfile(args_password):
+        try:
+            with io.open(args_password, 'r') as fp:
+                passwd = fp.readline()
+                if passwd.strip():
+                    return passwd.strip()
+        except Exception as e:
+            eprint(f'Unable to open password file: {e}')
+            sys.exit(1)
+    return args_password
 
 
 def display_notification(args, title, message):
     """
     A wrapper function for displaying a single notification
 
-    args: the argparse processed command-line arguments
-    title: notification title
-    message: notification message
+    :param args: The arguments assigned from argparse
+    :type args: argparse.Namespace
+
+    :param title: The title
+    :type title: str
+
+    :param message: The message
+    :type message: str
     """
     if args.osd_sys == 'pynotify':
         if not pynotify:
             raise Exception(
-                'Could not load "pynotify".\n'
-                'Please install "pynotify" or use a different osd-system!\n'
-                'Terminating...\n')
+                'Could not load "pynotify".'
+                'Please install "pynotify" or use a different osd-system!'
+                'Terminating...')
         if not pynotify.init('BEINC Notify'):
-            raise Exception('There was a problem with libnotify\n')
+            raise Exception('There was a problem with libnotify')
         notification_obj = pynotify.Notification(summary=title,
                                                  message=message)
-        if PY3:
-            notification_obj.timeout = 1000 * args.osd_timeout
-            notification_obj.set_category('im.received')
-        else:
-            notification_obj.set_timeout(1000 * args.osd_timeout)
-            notification_obj.set_property(
-                'app_name',
-                '{0} {1}'.format(sys.argv[0], __version__))
+        notification_obj.timeout = 1000 * args.osd_timeout
+        notification_obj.set_category('im.received')
         notification_obj.show()
     else:
-        raise Exception(
-            'Unsupported osd-system: {0}\n'.format(args.osd_sys))
+        raise Exception(f'Unsupported osd-system: {args.osd_sys}')
 
 
-def poll_notifications(scheduler, args):
+def pull_notifications(scheduler, args):
     """
-    the core function initiated by the scheduler performing a single poll
+    The core function initiated by the scheduler performing a single pull
 
-    scheduler: scheduler object
-    args: the argparse processed command-line arguments
+    :param scheduler: Scheduler object
+    :type scheduler: sched.scheduler
+
+    :param args: The arguments assigned from argparse
+    :type args: argparse.Namespace
     """
     try:
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -101,9 +124,9 @@ def poll_notifications(scheduler, args):
             context.check_hostname = bool(not args.disable_hostname_check)
         if args.ciphers:
             context.set_ciphers(args.ciphers)
-        response = urlopen(
+        response = urllib.request.urlopen(
             args.url,
-            data=urlencode(
+            data=urllib.parse.urlencode(
                 (
                     ('resource_name', args.rname),
                     ('password', args.password)
@@ -120,20 +143,21 @@ def poll_notifications(scheduler, args):
         response.close()
         scheduler.enter(args.frequency,
                         1,
-                        poll_notifications,
+                        pull_notifications,
                         (scheduler, args))
     except ssl.SSLError as e:
-        sys.stderr.write('BEINC SSL/TLS error: {0}\n'.format(e))
+        eprint(f'BEINC SSL/TLS error: {e}')
         sys.exit(errno.EPERM)
     except socket.error as e:
-        sys.stderr.write('BEINC connection error: {0}\n'.format(e))
+        eprint(f'BEINC connection error: {e}')
         sys.exit(errno.EPERM)
     except Exception as e:
-        sys.stderr.write('BEINC generic client error: {0}\n'.format(e))
+        eprint(f'BEINC generic client error: {e}')
         sys.exit(errno.EPERM)
 
 
-def main():
+def main(inargs=None):
+    """main entry"""
     parser = argparse.ArgumentParser(
         description='The following options are available')
     parser.add_argument(
@@ -168,7 +192,7 @@ def main():
         type=int,
         dest='frequency',
         default=10,
-        help='Polling frequency in seconds (default: 10)')
+        help='Pulling frequency in seconds (default: 10)')
     parser.add_argument(
         '-n', '--resource-name',
         metavar='NAME',
@@ -208,28 +232,14 @@ def main():
     parser.add_argument(
         '-v', '--version',
         action='version',
-        version='%(prog)s {0}'.format(__version__),
+        version=f'%(prog)s {__version__}',
         help='display program-version and exit')
-    args = parser.parse_args()
-    if not args.password:
-        try:
-            args.password = getpass.getpass()
-        except Exception as e:
-            sys.stderr.write('Prompt terminated\n')
-            sys.exit(errno.EACCES)
-    elif os.path.isfile(args.password):
-        try:
-            with open(args.password, 'r') as fp:
-                passwd = fp.readline()
-                if passwd.strip():
-                    args.password = passwd.strip()
-        except Exception as e:
-            sys.stderr.write('Unable to open password file: {0}'.format(e))
-            sys.exit(1)
+    args = parser.parse_args(inargs)
+    args.password = fetch_password(args.password)
     scheduler = sched.scheduler(time.time, time.sleep)
     scheduler.enter(args.frequency,
                     1,
-                    poll_notifications,
+                    pull_notifications,
                     (scheduler, args))
     scheduler.run()
 
