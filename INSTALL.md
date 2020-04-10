@@ -22,8 +22,10 @@ and their software requirements!
 
 ### FreeBSD 12
 
-# cd /usr/ports/devel/py-notify
-# make install clean
+   ```bash
+   cd /usr/ports/devel/py-notify
+   make install clean
+   ```
 
 
 ### Intallation using virtualenv and pip
