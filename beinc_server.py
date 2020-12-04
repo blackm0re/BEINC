@@ -80,7 +80,7 @@ def beinc_login_required(method):
         try:
             instance = self.server.instances[data.get('resource_name')]
         except Exception:
-            raise BEINCError401('Wrong instance or password')
+            raise BEINCError401('Wrong instance or password') from None
         if not instance.password_match(data.get('password')):
             raise BEINCError401('Wrong instance or password')
         return method(self, data, *arg, **kwargs)
