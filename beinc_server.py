@@ -38,7 +38,7 @@ except ImportError:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.0'
+__version__ = '4.1'
 __license__ = 'GPL3'
 
 
