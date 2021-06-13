@@ -143,9 +143,9 @@ documentation to better illustrate the comments.
 
                 # Channel list
                 # Default: [] (empty)
-                "channel_list": ["Freenode.#python",
+                "channel_list": ["LiberaChat.#python",
                                  "Exile.#test",
-                                 "Freenode.#gentoo",
+                                 "LiberaChat.#gentoo",
                                  "Exile.#pichove"],
 
                 # Nick list

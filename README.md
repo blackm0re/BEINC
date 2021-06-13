@@ -113,7 +113,7 @@ BEINC is hosted on GitHub: https://github.com/blackm0re/BEINC
 
 ## Author
 
-Simeon Simeonov - sgs @ Freenode
+Simeon Simeonov - sgs @ LiberaChat
 
 
 ## License
