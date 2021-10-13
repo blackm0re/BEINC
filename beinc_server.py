@@ -336,12 +336,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='The following options are available')
     parser.add_argument(
-        '-d',
-        action='store_true',
-        dest='daemonize',
-        default=False,
-        help='Run the BEINC-server in the background')
-    parser.add_argument(
         '-H', '--hostname',
         metavar='HOSTNAME',
         type=str,
