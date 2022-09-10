@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.0
+# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.3
 # Copyright (C) 2013-2022 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@ except ImportError:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.2'
+__version__ = '4.3'
 __license__ = 'GPL3'
 
 

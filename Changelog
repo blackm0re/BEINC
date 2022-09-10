@@ -1,3 +1,7 @@
+v4.3:
+    - remove obsolete SSL/TLS code
+    - use black alike coding style
+
 v4.1:
     - re-raise exceptions properly
     - fix error when using Python 3.9 due to removed 'encoding' parameter

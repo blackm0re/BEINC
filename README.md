@@ -1,4 +1,4 @@
-Copyright (C) 2014-2020 - Simeon Simeonov
+Copyright (C) 2014-2022 - Simeon Simeonov
 See the end of the file for license conditions.
 
 
