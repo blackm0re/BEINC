@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.0
-# Copyright (C) 2013-2020 Simeon Simeonov
+# Copyright (C) 2013-2022 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,15 +21,15 @@
 import argparse
 import cgi
 import errno
+import io
 import json
 import logging
 import os
 import ssl
 import sys
-
 from functools import wraps
-from logging.config import fileConfig
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from logging.config import fileConfig
 
 try:
     import notify2 as pynotify
@@ -38,7 +38,7 @@ except ImportError:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.1'
+__version__ = '4.2'
 __license__ = 'GPL3'
 
 
@@ -71,6 +71,7 @@ def eprint(*arg, **kwargs):
 
 def beinc_login_required(method):
     """Decorator for checking login credentials"""
+
     @wraps(method)
     def wrapper(self, data, *arg, **kwargs):
         if data.get('resource_name') is None:
@@ -84,6 +85,7 @@ def beinc_login_required(method):
         if not instance.password_match(data.get('password')):
             raise BEINCError401('Wrong instance or password')
         return method(self, data, *arg, **kwargs)
+
     return wrapper
 
 
@@ -105,19 +107,24 @@ class BEINCInstance:
             self._queue_size = 0  # disable queueing
             if pynotify is None:
                 eprint('This server does not possess pynotify capability')
-                eprint(f'Remove the instance {self._name} or define it with '
-                       f'"osd_system": "none"  or other '
-                       f'available backend')
+                eprint(
+                    f'Remove the instance {self._name} or define it with '
+                    f'"osd_system": "none"  or other '
+                    f'available backend'
+                )
                 sys.exit(errno.EPERM)
             try:
                 self._osd_notification = pynotify.Notification(' ')
                 self._osd_notification.timeout = 1000 * int(
-                    instance_dict.get('osd_timeout', 5))
+                    instance_dict.get('osd_timeout', 5)
+                )
                 self._osd_notification.set_category('im.received')
                 self._osd_type = BEINC_OSD_TYPE_PYNOTIFY
             except Exception as e:
-                eprint(f'Unable to set up a pynotify notification object '
-                       f'for "{self._name}" ({e})')
+                eprint(
+                    f'Unable to set up a pynotify notification object '
+                    f'for "{self._name}" ({e})'
+                )
                 sys.exit(errno.EPERM)
 
     @property
@@ -195,6 +202,7 @@ class BEINCInstance:
 
 class BEINCCustomHandler(BaseHTTPRequestHandler):
     """Custom handler"""
+
     def do_POST(self):
         """Handle POST requests"""
         if self.path.strip('/') not in ('beinc/push', 'beinc/pull'):
@@ -203,14 +211,18 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
         form = cgi.FieldStorage(
             fp=self.rfile,
             headers=self.headers,
-            environ={'REQUEST_METHOD': 'POST',
-                     'CONTENT_TYPE': self.headers['Content-Type']})
+            environ={
+                'REQUEST_METHOD': 'POST',
+                'CONTENT_TYPE': self.headers['Content-Type'],
+            },
+        )
         # extract all known fields
         POST_data = dict(
             resource_name=form.getvalue('resource_name'),
             password=form.getvalue('password'),
             title=form.getvalue('title', ''),
-            message=form.getvalue('message', ''))
+            message=form.getvalue('message', ''),
+        )
         try:
             result = {}
             if self.path.strip('/') == 'beinc/push':
@@ -249,10 +261,11 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
         instance = self.server.instances[data.get('resource_name')]
         try:
             if not instance.queueable:
-                raise BEINCError405(
-                    'This instance does not support queuing')
-            return {'message': 'OK. Fetched.',
-                    'data': {'messages': instance.get_queue()}}
+                raise BEINCError405('This instance does not support queuing')
+            return {
+                'message': 'OK. Fetched.',
+                'data': {'messages': instance.get_queue()},
+            }
         except Exception as e:
             self._generate_json_error(500, str(e))
 
@@ -270,9 +283,9 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
         msg = {'code': code, 'message': message, 'data': {}}
-        self.wfile.write(json.dumps(msg,
-                                    sort_keys=True,
-                                    indent=4).encode('utf-8'))
+        self.wfile.write(
+            json.dumps(msg, sort_keys=True, indent=4).encode('utf-8')
+        )
 
     def _render_to_JSON_response(self, context):
         """
@@ -284,13 +297,14 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
-        self.wfile.write(json.dumps(response,
-                                    sort_keys=True,
-                                    indent=4).encode('utf-8'))
+        self.wfile.write(
+            json.dumps(response, sort_keys=True, indent=4).encode('utf-8')
+        )
 
 
 class BEINCNotifyServer(HTTPServer):
     """BEINCNotifyServer class"""
+
     def __init__(self, *arg, **kwargs):
         """Default constructor"""
         super().__init__(*arg, **kwargs)
@@ -319,9 +333,7 @@ class BEINCNotifyServer(HTTPServer):
                 self._instances[instance['name']] = BEINCInstance(instance)
                 logger.info('Instance %s added', instance['name'])
         except Exception as e:
-            eprint('Unable to create instance "{0}": {1}'.format(
-                instance['name'],
-                e))
+            eprint(f"Unable to create instance \"{instance['name']}\": {e}")
             sys.exit(1)
 
     @property
@@ -334,51 +346,66 @@ class BEINCNotifyServer(HTTPServer):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='The following options are available')
+        description='The following options are available'
+    )
     parser.add_argument(
-        '-H', '--hostname',
+        '-H',
+        '--hostname',
         metavar='HOSTNAME',
         type=str,
         dest='hostname',
         default='127.0.0.1',
-        help='BEINC server IP / hostname (default: 127.0.0.1)')
+        help='BEINC server IP / hostname (default: 127.0.0.1)',
+    )
     parser.add_argument(
-        '-L', '--logger-name',
+        '-L',
+        '--logger-name',
         metavar='NAME',
         type=str,
         dest='logger_name',
         default='',
-        help="BEINC logger name (default: 'beinc')")
+        help="BEINC logger name (default: 'beinc')",
+    )
     parser.add_argument(
-        '-l', '--logger-config',
+        '-l',
+        '--logger-config',
         metavar='CONFIG',
         type=str,
         dest='logger_config',
         default=os.path.expanduser('~/.beinc_server_logger.ini'),
-        help=('BEINC logger config (.ini) '
-              '(default: ~/.beinc_server_logger.ini)'))
+        help=(
+            'BEINC logger config (.ini) '
+            '(default: ~/.beinc_server_logger.ini)'
+        ),
+    )
     parser.add_argument(
-        '-p', '--port',
+        '-p',
+        '--port',
         metavar='PORT',
         type=int,
         dest='port',
         default=9998,
-        help='BEINC server port (default: 9998)')
+        help='BEINC server port (default: 9998)',
+    )
     parser.add_argument(
-        '-f', '--config-file',
+        '-f',
+        '--config-file',
         metavar='FILE',
         type=str,
         default=os.path.expanduser('~/.beinc_server.json'),
         dest='config_file',
-        help='BEINC config file (default: ~/.beinc_server.json)')
+        help='BEINC config file (default: ~/.beinc_server.json)',
+    )
     parser.add_argument(
-        '-v', '--version',
+        '-v',
+        '--version',
         action='version',
         version=f'%(prog)s {__version__}',
-        help='Display program-version and exit')
+        help='Display program-version and exit',
+    )
     args = parser.parse_args()
     try:
-        with open(args.config_file, 'r') as fp:
+        with io.open(args.config_file, 'r', encoding='utf-8') as fp:
             config_dict = json.load(fp)
     except Exception as e:
         eprint(f'Unable to parse {args.config_file}: {e}')
@@ -390,35 +417,42 @@ if __name__ == '__main__':
         else:
             logging.basicConfig(
                 format='%(asctime)s - %(levelname)s - %(message)s',
-                level=logging.DEBUG)
+                level=logging.DEBUG,
+            )
             logger = logging.getLogger('beinc')
         logger.info('BEINC starting. Loading config...')
         if config_dict.get('config_version') != BEINC_CURRENT_CONFIG_VERSION:
             eprint(
-                'WARNING: The version of the config-file: {0} ({1}) '
-                'does not correspond to the latest version supported '
-                'by this program ({2})\nCheck beinc_config_sample.json '
-                'for the newest features!'.format(
-                    args.config_file,
-                    config_dict.get('config_version', 'Not set'),
-                    BEINC_CURRENT_CONFIG_VERSION))
+                f'WARNING: The version of the config-file: {args.config_file} '
+                f'({config_dict.get("config_version", "Not set")}) does not '
+                'correspond to the latest version supported by this program '
+                f'({BEINC_CURRENT_CONFIG_VERSION})\n'
+                'Check beinc_config_sample.json for the newest features!'
+            )
         ssl_certificate = config_dict['server']['general'].get(
-            'ssl_certificate')
+            'ssl_certificate'
+        )
         ssl_private_key = config_dict['server']['general'].get(
-            'ssl_private_key')
+            'ssl_private_key'
+        )
         ssl_acceptable_ciphers_str = config_dict['server']['general'].get(
-            'ssl_ciphers')
-        beinc_server = BEINCNotifyServer((args.hostname, args.port),
-                                         BEINCCustomHandler)
+            'ssl_ciphers'
+        )
+        beinc_server = BEINCNotifyServer(
+            (args.hostname, args.port),
+            BEINCCustomHandler,
+        )
         beinc_server.set_config(config_dict)
         if ssl_certificate and ssl_private_key:
-            beinc_server.socket = ssl.wrap_socket(
-                beinc_server.socket,
-                keyfile=ssl_private_key,
-                certfile=ssl_certificate,
-                server_side=True,
-                ssl_version=ssl.PROTOCOL_TLSv1_2,
-                ciphers=ssl_acceptable_ciphers_str)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(
+                certfile=ssl_certificate, keyfile=ssl_private_key
+            )
+            if ssl_acceptable_ciphers_str is not None:
+                context.set_ciphers(ssl_acceptable_ciphers_str)
+            beinc_server.socket = context.wrap_socket(
+                beinc_server.socket, server_side=True
+            )
         logger.info('Done!')
         beinc_server.serve_forever()
     except KeyboardInterrupt:

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.0
-# Copyright (C) 2013-2020 Simeon Simeonov
+# Copyright (C) 2013-2022 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ except ImportError:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.1'
+__version__ = '4.2'
 __license__ = 'GPL3'
 
 
@@ -65,7 +65,7 @@ def fetch_password(args_password):
             sys.exit(errno.EACCES)
     elif os.path.isfile(args_password):
         try:
-            with io.open(args_password, 'r') as fp:
+            with io.open(args_password, 'r', encoding='utf-8') as fp:
                 passwd = fp.readline()
                 if passwd.strip():
                     return passwd.strip()
@@ -93,11 +93,14 @@ def display_notification(args, title, message):
             raise Exception(
                 'Could not load "pynotify".'
                 'Please install "pynotify" or use a different osd-system!'
-                'Terminating...')
+                'Terminating...'
+            )
         if not pynotify.init('BEINC Notify'):
             raise Exception('There was a problem with libnotify')
-        notification_obj = pynotify.Notification(summary=title,
-                                                 message=message)
+        notification_obj = pynotify.Notification(
+            summary=title,
+            message=message,
+        )
         notification_obj.timeout = 1000 * args.osd_timeout
         notification_obj.set_category('im.received')
         notification_obj.show()
@@ -116,35 +119,37 @@ def pull_notifications(scheduler, args):
     :type args: argparse.Namespace
     """
     try:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        context.verify_mode = ssl.CERT_NONE
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         if args.cert:
             context.verify_mode = ssl.CERT_REQUIRED
             context.load_verify_locations(cafile=os.path.expanduser(args.cert))
             context.check_hostname = bool(not args.disable_hostname_check)
+        else:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
         if args.ciphers:
             context.set_ciphers(args.ciphers)
         response = urllib.request.urlopen(
             args.url,
             data=urllib.parse.urlencode(
-                (
-                    ('resource_name', args.rname),
-                    ('password', args.password)
-                )).encode('utf-8'),
+                (('resource_name', args.rname), ('password', args.password))
+            ).encode('utf-8'),
             timeout=args.socket_timeout,
-            context=context)
+            context=context,
+        )
         response_dict = json.loads(response.read().decode('utf-8'))
         if response.code != 200:
             raise socket.error(response_dict.get('message', ''))
         for entry in response_dict['data']['messages']:
-            display_notification(args,
-                                 entry.get('title', ''),
-                                 entry.get('message', ''))
+            display_notification(
+                args,
+                entry.get('title', ''),
+                entry.get('message', ''),
+            )
         response.close()
-        scheduler.enter(args.frequency,
-                        1,
-                        pull_notifications,
-                        (scheduler, args))
+        scheduler.enter(
+            args.frequency, 1, pull_notifications, (scheduler, args)
+        )
     except ssl.SSLError as e:
         eprint(f'BEINC SSL/TLS error: {e}')
         sys.exit(errno.EPERM)
@@ -159,88 +164,105 @@ def pull_notifications(scheduler, args):
 def main(inargs=None):
     """main entry"""
     parser = argparse.ArgumentParser(
-        description='The following options are available')
+        description='The following options are available'
+    )
     parser.add_argument(
         'url',
         metavar='URL',
         type=str,
-        help='BEINC server destination URL')
+        help='BEINC server destination URL',
+    )
     parser.add_argument(
-        '-c', '--cert-file',
+        '-c',
+        '--cert-file',
         metavar='FILE',
         type=str,
         dest='cert',
         default='',
         help='CA-cert to check the server-cert against '
-        '(default: Check disabled)')
+        '(default: Check disabled)',
+    )
     parser.add_argument(
         '--ciphers',
         metavar='CIPHERS',
         type=str,
         dest='ciphers',
         default='',
-        help='Preferred ciphers list (default: auto)')
+        help='Preferred ciphers list (default: auto)',
+    )
     parser.add_argument(
         '--disable-hostname-check',
         action='store_true',
         dest='disable_hostname_check',
         default=False,
-        help='Do not check whether server cert matches server hostname')
+        help='Do not check whether server cert matches server hostname',
+    )
     parser.add_argument(
-        '-f', '--frequency',
+        '-f',
+        '--frequency',
         metavar='SECONDS',
         type=int,
         dest='frequency',
         default=10,
-        help='Pulling frequency in seconds (default: 10)')
+        help='Pulling frequency in seconds (default: 10)',
+    )
     parser.add_argument(
-        '-n', '--resource-name',
+        '-n',
+        '--resource-name',
         metavar='NAME',
         type=str,
         dest='rname',
         required=True,
-        help='The name of the BEINC-resource on the remote server')
+        help='The name of the BEINC-resource on the remote server',
+    )
     parser.add_argument(
-        '-o', '--osd-system',
+        '-o',
+        '--osd-system',
         metavar='SYSTEM',
         type=str,
         dest='osd_sys',
         default='pynotify',
-        help='BEINC osd-system: "pynotify" (default)')
+        help='BEINC osd-system: "pynotify" (default)',
+    )
     parser.add_argument(
-        '-p', '--password',
+        '-p',
+        '--password',
         metavar='PASSWORD[FILE]',
         type=str,
         dest='password',
         default='',
         help='BEINC taget-password / text-file containing the target password'
-        ' (default & recommended: prompt for passwd)')
+        ' (default & recommended: prompt for passwd)',
+    )
     parser.add_argument(
-        '-T', '--socket-timeout',
+        '-T',
+        '--socket-timeout',
         metavar='SECONDS',
         type=int,
         dest='socket_timeout',
         default=3,
-        help='Socket timeout in seconds (0=Python default) (default: 3)')
+        help='Socket timeout in seconds (0=Python default) (default: 3)',
+    )
     parser.add_argument(
-        '-t', '--osd-timeout',
+        '-t',
+        '--osd-timeout',
         metavar='SECONDS',
         type=int,
         dest='osd_timeout',
         default=5,
-        help='OSD timeout (default: 5)')
+        help='OSD timeout (default: 5)',
+    )
     parser.add_argument(
-        '-v', '--version',
+        '-v',
+        '--version',
         action='version',
         version=f'%(prog)s {__version__}',
-        help='display program-version and exit')
+        help='display program-version and exit',
+    )
     args = parser.parse_args(inargs)
     args.password = fetch_password(args.password)
     scheduler = sched.scheduler(time.time, time.sleep)
-    scheduler.enter(args.frequency,
-                    1,
-                    pull_notifications,
-                    (scheduler, args))
+    scheduler.enter(args.frequency, 1, pull_notifications, (scheduler, args))
     scheduler.run()
 
 
