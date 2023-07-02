@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.3
-# Copyright (C) 2013-2022 Simeon Simeonov
+# Copyright (C) 2013-2023 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 
 
 import argparse
-import cgi
 import errno
 import io
 import json
@@ -27,6 +26,7 @@ import logging
 import os
 import ssl
 import sys
+import urllib.parse
 from functools import wraps
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging.config import fileConfig
@@ -46,6 +46,10 @@ BEINC_OSD_TYPE_NONE = 0
 BEINC_OSD_TYPE_PYNOTIFY = 1
 
 BEINC_CURRENT_CONFIG_VERSION = 3
+
+
+class BEINCError400(Exception):
+    """BEINCError400"""
 
 
 class BEINCError401(Exception):
@@ -203,33 +207,46 @@ class BEINCInstance:
 class BEINCCustomHandler(BaseHTTPRequestHandler):
     """Custom handler"""
 
+    @staticmethod
+    def parse_raw_POST_data(fp, headers):
+        """
+        Parses the POST data the way the deprecated cgi.FieldStorage used to
+        """
+        try:
+            clen = -1
+            if headers is None:
+                headers = {}
+            if 'content-length' in headers:
+                try:
+                    clen = int(headers['content-length'])
+                except ValueError:
+                    pass
+            return dict(urllib.parse.parse_qsl(fp.read(clen).decode('utf-8')))
+        except Exception as e:
+            raise BEINCError400('Invalid POST request') from e
+
     def do_POST(self):
         """Handle POST requests"""
         if self.path.strip('/') not in ('beinc/push', 'beinc/pull'):
             self._generate_json_error(404, 'Invalid resource path')
             return
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={
-                'REQUEST_METHOD': 'POST',
-                'CONTENT_TYPE': self.headers['Content-Type'],
-            },
-        )
-        # extract all known fields
-        POST_data = dict(
-            resource_name=form.getvalue('resource_name'),
-            password=form.getvalue('password'),
-            title=form.getvalue('title', ''),
-            message=form.getvalue('message', ''),
-        )
         try:
+            form = self.parse_raw_POST_data(self.rfile, self.headers)
+            # extract all known fields
+            POST_data = {
+                'resource_name': form.get('resource_name'),
+                'password': form.get('password'),
+                'title': form.get('title', ''),
+                'message': form.get('message', ''),
+            }
             result = {}
             if self.path.strip('/') == 'beinc/push':
                 result = self._handle_push(POST_data)
             elif self.path.strip('/') == 'beinc/pull':
                 result = self._handle_pull(POST_data)
             self._render_to_JSON_response(result)
+        except BEINCError400 as e:
+            self._generate_json_error(400, str(e))
         except BEINCError401 as e:
             self._generate_json_error(401, str(e))
         except BEINCError403 as e:
