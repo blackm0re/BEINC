@@ -1,4 +1,4 @@
-Copyright (C) 2014-2022 - Simeon Simeonov
+Copyright (C) 2014-2024 - Simeon Simeonov
 See the end of the file for license conditions.
 
 
@@ -90,13 +90,11 @@ your URL will be: https://hostname:port
 ## Supported systems & requirements
 
 Any system running the software required for the selected components.
-All components tested on: Gentoo GNU/Linux,
-                          Ubuntu GNU/Linux 18.4,
-                          FreeBSD 12.x
+All components tested on: Gentoo GNU/Linux, FreeBSD (12.x, 13.x)
 
 
 ### Requirements
-All components: Python >= 3.6.*
+All components: Python >= 3.9.*
 
 beinc_server.py: pynotify >= 0.1 (optional)
 beinc_weechat.py: Weechat >= 0.4.0

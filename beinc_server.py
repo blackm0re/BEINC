@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.3
-# Copyright (C) 2013-2023 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC)
+# Copyright (C) 2013-2024 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,14 +15,16 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+"""BEINC standalone server implementation"""
 
 import argparse
+import contextlib
 import errno
 import io
 import json
 import logging
 import os
+import pathlib
 import ssl
 import sys
 import urllib.parse
@@ -38,7 +39,7 @@ except ImportError:
 
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.3'
+__version__ = '4.4'
 __license__ = 'GPL3'
 
 
@@ -48,24 +49,24 @@ BEINC_OSD_TYPE_PYNOTIFY = 1
 BEINC_CURRENT_CONFIG_VERSION = 3
 
 
-class BEINCError400(Exception):
-    """BEINCError400"""
+class BEINC400Error(Exception):
+    """BEINC400Error"""
 
 
-class BEINCError401(Exception):
-    """BEINCError401"""
+class BEINC401Error(Exception):
+    """BEINC401Error"""
 
 
-class BEINCError403(Exception):
-    """BEINCError403"""
+class BEINC403Error(Exception):
+    """BEINC403Error"""
 
 
-class BEINCError404(Exception):
-    """BEINCError404"""
+class BEINC404Error(Exception):
+    """BEINC404Error"""
 
 
-class BEINCError405(Exception):
-    """BEINCError405"""
+class BEINC405Error(Exception):
+    """BEINC405Error"""
 
 
 def eprint(*arg, **kwargs):
@@ -79,15 +80,15 @@ def beinc_login_required(method):
     @wraps(method)
     def wrapper(self, data, *arg, **kwargs):
         if data.get('resource_name') is None:
-            raise BEINCError403('Resource-name missing')
+            raise BEINC403Error('Resource-name missing')
         if data.get('password') is None:
-            raise BEINCError401('Password missing')
+            raise BEINC401Error('Password missing')
         try:
             instance = self.server.instances[data.get('resource_name')]
         except Exception:
-            raise BEINCError401('Wrong instance or password') from None
+            raise BEINC401Error('Wrong instance or password') from None
         if not instance.password_match(data.get('password')):
-            raise BEINCError401('Wrong instance or password')
+            raise BEINC401Error('Wrong instance or password')
         return method(self, data, *arg, **kwargs)
 
     return wrapper
@@ -124,10 +125,10 @@ class BEINCInstance:
                 )
                 self._osd_notification.set_category('im.received')
                 self._osd_type = BEINC_OSD_TYPE_PYNOTIFY
-            except Exception as e:
+            except Exception as exp:
                 eprint(
                     f'Unable to set up a pynotify notification object '
-                    f'for "{self._name}" ({e})'
+                    f'for "{self._name}" ({exp})'
                 )
                 sys.exit(errno.EPERM)
 
@@ -217,13 +218,11 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
             if headers is None:
                 headers = {}
             if 'content-length' in headers:
-                try:
+                with contextlib.suppress(ValueError):
                     clen = int(headers['content-length'])
-                except ValueError:
-                    pass
             return dict(urllib.parse.parse_qsl(fp.read(clen).decode('utf-8')))
-        except Exception as e:
-            raise BEINCError400('Invalid POST request') from e
+        except Exception as exp:
+            raise BEINC400Error('Invalid POST request') from exp
 
     def do_POST(self):
         """Handle POST requests"""
@@ -245,18 +244,18 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
             elif self.path.strip('/') == 'beinc/pull':
                 result = self._handle_pull(POST_data)
             self._render_to_JSON_response(result)
-        except BEINCError400 as e:
-            self._generate_json_error(400, str(e))
-        except BEINCError401 as e:
-            self._generate_json_error(401, str(e))
-        except BEINCError403 as e:
-            self._generate_json_error(403, str(e))
-        except BEINCError404 as e:
-            self._generate_json_error(404, str(e))
-        except BEINCError405 as e:
-            self._generate_json_error(405, str(e))
-        except Exception as e:
-            self._generate_json_error(500, f'Unexpected error: {e}')
+        except BEINC400Error as err:
+            self._generate_json_error(400, str(err))
+        except BEINC401Error as err:
+            self._generate_json_error(401, str(err))
+        except BEINC403Error as err:
+            self._generate_json_error(403, str(err))
+        except BEINC404Error as err:
+            self._generate_json_error(404, str(err))
+        except BEINC405Error as err:
+            self._generate_json_error(405, str(err))
+        except Exception as exp:
+            self._generate_json_error(500, f'Unexpected error: {exp}')
 
     def do_GET(self):
         """Handle GET Requests"""
@@ -266,25 +265,19 @@ class BEINCCustomHandler(BaseHTTPRequestHandler):
     def _handle_push(self, data):
         """Handle push"""
         instance = self.server.instances[data.get('resource_name')]
-        try:
-            instance.send_message(data.get('title'), data.get('message'))
-            return {'message': 'OK. Sent.'}
-        except Exception as e:
-            self._generate_json_error(500, str(e))
+        instance.send_message(data.get('title'), data.get('message'))
+        return {'message': 'OK. Sent.'}
 
     @beinc_login_required
     def _handle_pull(self, data):
         """Handle pull"""
         instance = self.server.instances[data.get('resource_name')]
-        try:
-            if not instance.queueable:
-                raise BEINCError405('This instance does not support queuing')
-            return {
-                'message': 'OK. Fetched.',
-                'data': {'messages': instance.get_queue()},
-            }
-        except Exception as e:
-            self._generate_json_error(500, str(e))
+        if not instance.queueable:
+            raise BEINC405Error('This instance does not support queuing')
+        return {
+            'message': 'OK. Fetched.',
+            'data': {'messages': instance.get_queue()},
+        }
 
     def _generate_json_error(self, code, message):
         """
@@ -349,15 +342,13 @@ class BEINCNotifyServer(HTTPServer):
             for instance in self._config['server']['instances']:
                 self._instances[instance['name']] = BEINCInstance(instance)
                 logger.info('Instance %s added', instance['name'])
-        except Exception as e:
-            eprint(f"Unable to create instance \"{instance['name']}\": {e}")
+        except Exception as exp:
+            eprint(f"Unable to create instance \"{instance['name']}\": {exp}")
             sys.exit(1)
 
     @property
     def instances(self):
-        """
-        a property that returns the instance list (read-only)
-        """
+        """a property that returns the instance list (read-only)"""
         return self._instances
 
 
@@ -424,11 +415,11 @@ if __name__ == '__main__':
     try:
         with io.open(args.config_file, 'r', encoding='utf-8') as fp:
             config_dict = json.load(fp)
-    except Exception as e:
-        eprint(f'Unable to parse {args.config_file}: {e}')
+    except Exception as exp:
+        eprint(f'Unable to parse {args.config_file}: {exp}')
         sys.exit(errno.EIO)
     try:
-        if os.path.isfile(args.logger_config):
+        if pathlib.Path(args.logger_config).is_file():
             fileConfig(args.logger_config)
             logger = logging.getLogger(args.logger_name)
         else:
@@ -456,8 +447,7 @@ if __name__ == '__main__':
             'ssl_ciphers'
         )
         beinc_server = BEINCNotifyServer(
-            (args.hostname, args.port),
-            BEINCCustomHandler,
+            (args.hostname, args.port), BEINCCustomHandler
         )
         beinc_server.set_config(config_dict)
         if ssl_certificate and ssl_private_key:
@@ -474,7 +464,7 @@ if __name__ == '__main__':
         beinc_server.serve_forever()
     except KeyboardInterrupt:
         print('\n\nTerminating...')
-    except Exception as e:
-        eprint(f'BEINCServer critical error: {e}')
+    except Exception as exp:
+        eprint(f'BEINCServer critical error: {exp}')
         sys.exit(1)
     sys.exit(0)

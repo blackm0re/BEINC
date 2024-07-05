@@ -1,3 +1,7 @@
+v4.4:
+    - replace the functionality from the deprecated cgi module
+    - do some more format / linting (add .ruff.toml)
+
 v4.3:
     - remove obsolete SSL/TLS code
     - use black alike coding style

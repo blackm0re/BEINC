@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-# Blackmore's Enhanced IRC-Notification Collection (BEINC) v4.3
-# Copyright (C) 2013-2022 Simeon Simeonov
+# Blackmore's Enhanced IRC-Notification Collection (BEINC)
+# Copyright (C) 2013-2024 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """A generic BEINC client that can be used for testing or as a template"""
+
 import argparse
 import errno
 import getpass
 import io
 import json
 import os
+import pathlib
 import socket
 import ssl
 import sys
@@ -30,7 +31,7 @@ import urllib.parse
 import urllib.request
 
 __author__ = 'Simeon Simeonov'
-__version__ = '4.3'
+__version__ = '4.4'
 __license__ = 'GPL3'
 
 
@@ -55,14 +56,14 @@ def fetch_password(args_password):
         except KeyboardInterrupt:
             eprint(os.linesep + 'Prompt terminated')
             sys.exit(errno.EACCES)
-    elif os.path.isfile(args_password):
+    elif pathlib.Path(args_password).is_file():
         try:
             with io.open(args_password, 'r', encoding='utf-8') as fp:
                 passwd = fp.readline()
                 if passwd.strip():
                     return passwd.strip()
-        except Exception as e:
-            eprint(f'Unable to open password file: {e}')
+        except Exception as exp:
+            eprint(f'Unable to open password file: {exp}')
             sys.exit(1)
     return args_password
 
@@ -83,17 +84,14 @@ def pull_notifications(ssl_context, args):
     response = urllib.request.urlopen(
         args.url,
         data=urllib.parse.urlencode(
-            (
-                ('resource_name', args.rname),
-                ('password', args.password),
-            )
+            (('resource_name', args.rname), ('password', args.password))
         ).encode('utf-8'),
         timeout=args.socket_timeout,
         context=ssl_context,
     )
     response_dict = json.loads(response.read().decode('utf-8'))
     if response.code != 200:
-        raise socket.error(response_dict.get('message', ''))
+        raise OSError(response_dict.get('message', ''))
     return response_dict['data']['messages']
 
 
@@ -122,7 +120,7 @@ def push_notification(ssl_context, args):
     )
     response_dict = json.loads(response.read().decode('utf-8'))
     if response.code != 200:
-        raise socket.error(response_dict.get('message', ''))
+        raise OSError(response_dict.get('message', ''))
 
 
 def main(inargs=None):
@@ -131,10 +129,7 @@ def main(inargs=None):
         description='The following options are available'
     )
     parser.add_argument(
-        'url',
-        metavar='URL',
-        type=str,
-        help='BEINC server destination URL',
+        'url', metavar='URL', type=str, help='BEINC server destination URL'
     )
     parser.add_argument(
         '-c',
@@ -242,14 +237,14 @@ def main(inargs=None):
             push_notification(context, args)
             print('OK')
         sys.exit(0)
-    except ssl.SSLError as e:
-        eprint(f'BEINC SSL/TLS error: {e}')
+    except ssl.SSLError as err:
+        eprint(f'BEINC SSL/TLS error: {err}')
         sys.exit(errno.EPERM)
-    except socket.error as e:
-        eprint(f'BEINC connection error: {e}')
+    except OSError as err:
+        eprint(f'BEINC connection error: {err}')
         sys.exit(errno.EPERM)
-    except Exception as e:
-        eprint(f'BEINC generic client error: {e}')
+    except Exception as exp:
+        eprint(f'BEINC generic client error: {exp}')
         sys.exit(errno.EPERM)
 
 
